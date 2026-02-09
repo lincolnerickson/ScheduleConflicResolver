@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rooks Con 2026 Schedule Conflict Resolver</title>
+<style>
+:root {
+  --bg: #f5f5f5; --surface: #ffffff; --text: #1a1a1a; --text-muted: #666;
+  --border: #e0e0e0; --shadow: rgba(0,0,0,0.08);
+  --must: #16a34a; --must-bg: #dcfce7; --must-border: #86efac;
+  --interested: #2563eb; --interested-bg: #dbeafe; --interested-border: #93c5fd;
+  --ifit: #d97706; --ifit-bg: #fef3c7; --ifit-border: #fcd34d;
+  --skip: #9ca3af; --skip-bg: #f3f4f6; --skip-border: #d1d5db;
+  --demo: #7c3aed; --heat: #ea580c; --semi: #0d9488; --final: #dc2626;
+  --continuous: #6366f1; --openplay: #0ea5e9; --na: #64748b;
+  --radius: 8px; --transition: 0.2s ease;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+.app { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+header { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: white; padding: 20px 0; margin-bottom: 0; }
+header .inner { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+header h1 { font-size: 1.5rem; font-weight: 700; }
+header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
+
+/* Tabs */
+.tabs { display: flex; background: var(--surface); border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 100; }
+.tab { flex: 1; padding: 12px 16px; text-align: center; cursor: pointer; font-weight: 600; font-size: 0.9rem; border: none; background: none; color: var(--text-muted); transition: var(--transition); border-bottom: 3px solid transparent; margin-bottom: -2px; }
+.tab:hover { color: var(--text); background: #f0f4ff; }
+.tab.active { color: var(--interested); border-bottom-color: var(--interested); }
+.tab .badge { display: inline-block; background: var(--interested); color: white; font-size: 0.7rem; padding: 1px 6px; border-radius: 10px; margin-left: 4px; vertical-align: middle; }
+
+/* Panels */
+.panel { display: none; padding: 16px 0; }
+.panel.active { display: block; }
+
+/* Toolbar */
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; background: var(--surface); border-radius: var(--radius); margin-bottom: 16px; box-shadow: 0 1px 3px var(--shadow); align-items: center; }
+.toolbar input[type="text"] { flex: 1; min-width: 180px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; }
+.toolbar select { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.85rem; background: white; }
+.toolbar .progress { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+
+/* Bulk actions */
+.bulk-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.bulk-btn { padding: 4px 10px; border: 1px solid var(--border); border-radius: 14px; font-size: 0.78rem; background: var(--surface); cursor: pointer; transition: var(--transition); }
+.bulk-btn:hover { background: var(--interested-bg); border-color: var(--interested-border); }
+
+/* Day groups */
+.day-group { margin-bottom: 24px; }
+.day-header { position: sticky; top: 50px; z-index: 50; background: var(--bg); padding: 8px 0; }
+.day-header h2 { font-size: 1.1rem; color: var(--text); padding: 8px 16px; background: var(--surface); border-radius: var(--radius); box-shadow: 0 1px 3px var(--shadow); display: flex; justify-content: space-between; align-items: center; }
+.day-header h2 span { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
+
+/* Event cards */
+.event-card { background: var(--surface); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 8px; box-shadow: 0 1px 3px var(--shadow); border-left: 4px solid var(--border); transition: var(--transition); }
+.event-card.rating-must { border-left-color: var(--must); background: var(--must-bg); }
+.event-card.rating-interested { border-left-color: var(--interested); background: var(--interested-bg); }
+.event-card.rating-ifit { border-left-color: var(--ifit); background: var(--ifit-bg); }
+.event-card.rating-skip { border-left-color: var(--skip); opacity: 0.6; }
+.event-card .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+.event-card .game-name { font-weight: 600; font-size: 0.95rem; }
+.event-card .session-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; color: white; white-space: nowrap; }
+.badge-demo { background: var(--demo); } .badge-heat { background: var(--heat); }
+.badge-semi { background: var(--semi); } .badge-final { background: var(--final); }
+.badge-continuous { background: var(--continuous); } .badge-openplay { background: var(--openplay); }
+.badge-na { background: var(--na); }
+.event-card .time-info { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px; }
+.event-card .rating-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.rating-btn { padding: 5px 10px; border-radius: 14px; font-size: 0.78rem; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: var(--transition); background: var(--skip-bg); color: var(--text-muted); }
+.rating-btn:hover { transform: scale(1.05); }
+.rating-btn.active-must { background: var(--must); color: white; border-color: var(--must); }
+.rating-btn.active-interested { background: var(--interested); color: white; border-color: var(--interested); }
+.rating-btn.active-ifit { background: var(--ifit); color: white; border-color: var(--ifit); }
+.rating-btn.active-skip { background: var(--skip); color: white; border-color: var(--skip); }
+.conflict-warn { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 4px 10px; border-radius: var(--radius); font-size: 0.8rem; margin-top: 6px; }
+
+/* Cards grid on wider screens */
+.events-list { display: grid; grid-template-columns: 1fr; gap: 8px; }
+@media (min-width: 700px) { .events-list { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1000px) { .events-list { grid-template-columns: 1fr 1fr 1fr; } }
+
+/* Optimize panel */
+.opt-section { background: var(--surface); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px var(--shadow); }
+.opt-section h3 { margin-bottom: 12px; font-size: 1rem; }
+.opt-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat-card { text-align: center; padding: 12px; border-radius: var(--radius); background: var(--bg); }
+.stat-card .num { font-size: 1.8rem; font-weight: 700; }
+.stat-card .label { font-size: 0.8rem; color: var(--text-muted); }
+.stat-must .num { color: var(--must); } .stat-interested .num { color: var(--interested); }
+.stat-ifit .num { color: var(--ifit); }
+.opt-btn { display: block; width: 100%; padding: 14px; font-size: 1.1rem; font-weight: 700; background: linear-gradient(135deg, var(--interested), #1d4ed8); color: white; border: none; border-radius: var(--radius); cursor: pointer; transition: var(--transition); }
+.opt-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+.opt-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.opt-error { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 12px; border-radius: var(--radius); margin-bottom: 12px; }
+.opt-warnings { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; padding: 12px; border-radius: var(--radius); margin-bottom: 12px; }
+.opt-result { margin-top: 16px; }
+.opt-result-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg); border-radius: var(--radius); margin-bottom: 4px; }
+.opt-result-item .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dot-must { background: var(--must); } .dot-interested { background: var(--interested); } .dot-ifit { background: var(--ifit); }
+.opt-result-item .ri-name { font-weight: 600; font-size: 0.9rem; flex: 1; }
+.opt-result-item .ri-time { font-size: 0.82rem; color: var(--text-muted); white-space: nowrap; }
+
+/* Schedule panel */
+.sched-controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.sched-controls button { padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: var(--transition); }
+.sched-controls button.active { background: var(--interested); color: white; border-color: var(--interested); }
+.sched-controls button:hover:not(.active) { background: var(--interested-bg); }
+.export-btn { margin-left: auto !important; background: var(--must) !important; color: white !important; border-color: var(--must) !important; }
+.export-btn:hover { opacity: 0.9; }
+
+/* Timeline */
+.timeline-wrap { overflow-x: auto; }
+.timeline { display: grid; gap: 2px; min-width: 600px; position: relative; }
+.timeline .tl-header { font-weight: 700; font-size: 0.8rem; text-align: center; padding: 6px 4px; background: #e0e7ff; border-radius: 4px; position: sticky; top: 0; }
+.timeline .tl-time { font-size: 0.72rem; color: var(--text-muted); text-align: right; padding-right: 6px; grid-column: 1; display: flex; align-items: start; justify-content: flex-end; }
+.tl-event { border-radius: 4px; padding: 3px 5px; font-size: 0.7rem; font-weight: 600; overflow: hidden; cursor: default; line-height: 1.2; border: 1px solid rgba(0,0,0,0.1); }
+.tl-type { display: inline-block; color: white; font-size: 0.55rem; padding: 0 3px; border-radius: 3px; vertical-align: middle; margin-left: 2px; }
+.tl-event.tl-must { background: var(--must-bg); border-color: var(--must); color: #15803d; }
+.tl-event.tl-interested { background: var(--interested-bg); border-color: var(--interested); color: #1d4ed8; }
+.tl-event.tl-ifit { background: var(--ifit-bg); border-color: var(--ifit); color: #b45309; }
+
+/* List view */
+.sched-list { background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: 0 1px 3px var(--shadow); }
+.sl-day { padding: 8px 16px; background: #e0e7ff; font-weight: 700; font-size: 0.9rem; }
+.sl-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.sl-item:last-child { border-bottom: none; }
+.sl-time { font-size: 0.85rem; color: var(--text-muted); min-width: 120px; white-space: nowrap; }
+.sl-name { font-weight: 600; font-size: 0.9rem; flex: 1; }
+.sl-gap { background: #f0fdf4; color: var(--must); font-style: italic; padding: 6px 16px; font-size: 0.82rem; border-bottom: 1px solid var(--border); }
+.no-schedule { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.no-schedule h3 { font-size: 1.2rem; margin-bottom: 8px; }
+
+/* My Ratings panel */
+.rating-group { margin-bottom: 16px; background: var(--surface); border-radius: var(--radius); box-shadow: 0 1px 3px var(--shadow); overflow: hidden; }
+.rg-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; font-weight: 700; font-size: 0.95rem; cursor: pointer; user-select: none; }
+.rg-header:hover { filter: brightness(0.95); }
+.rg-header .rg-toggle { font-size: 0.8rem; transition: transform 0.2s; }
+.rg-header.collapsed .rg-toggle { transform: rotate(-90deg); }
+.rg-header-must { background: var(--must-bg); color: #15803d; border-left: 4px solid var(--must); }
+.rg-header-interested { background: var(--interested-bg); color: #1d4ed8; border-left: 4px solid var(--interested); }
+.rg-header-ifit { background: var(--ifit-bg); color: #b45309; border-left: 4px solid var(--ifit); }
+.rg-header-skip { background: var(--skip-bg); color: #6b7280; border-left: 4px solid var(--skip); }
+.rg-items { }
+.rg-items.collapsed { display: none; }
+.rg-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.rg-item:last-child { border-bottom: none; }
+.rg-item .rg-name { font-weight: 600; font-size: 0.88rem; flex: 1; min-width: 120px; }
+.rg-item .rg-time { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; min-width: 110px; }
+.rg-item .rating-btns { display: flex; gap: 3px; }
+.rg-item .rating-btn { padding: 3px 8px; font-size: 0.72rem; }
+
+/* Toast */
+.toast { position: fixed; bottom: 20px; right: 20px; background: #1e3a5f; color: white; padding: 12px 20px; border-radius: var(--radius); font-size: 0.9rem; z-index: 1000; transform: translateY(100px); opacity: 0; transition: all 0.3s ease; }
+.toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <h1>Rooks Con 2026 — Schedule Conflict Resolver</h1>
+    <p>May 20-25 &bull; Rate events, optimize your schedule, export the result</p>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-tab="browse">Browse &amp; Rate <span class="badge" id="progress-badge">0/239</span></button>
+  <button class="tab" data-tab="optimize">Optimize</button>
+  <button class="tab" data-tab="ratings">My Ratings <span class="badge" id="ratings-badge">0</span></button>
+  <button class="tab" data-tab="schedule">My Schedule</button>
+</div>
+
+<div class="app">
+  <!-- Browse & Rate -->
+  <div class="panel active" id="panel-browse">
+    <div class="toolbar">
+      <input type="text" id="search-box" placeholder="Search events...">
+      <select id="filter-game"><option value="">All Games</option></select>
+      <select id="filter-day"><option value="">All Days</option></select>
+      <select id="filter-type"><option value="">All Types</option></select>
+      <select id="filter-rating">
+        <option value="">All Ratings</option>
+        <option value="must">Must Attend</option>
+        <option value="interested">Interested</option>
+        <option value="ifit">If It Fits</option>
+        <option value="skip">Skip</option>
+        <option value="unrated">Unrated</option>
+      </select>
+      <span class="progress" id="progress-text">0 / 239 rated</span>
+    </div>
+    <div class="bulk-bar" id="bulk-bar"></div>
+    <div id="events-container"></div>
+  </div>
+
+  <!-- My Ratings -->
+  <div class="panel" id="panel-ratings">
+    <div id="ratings-container"></div>
+    <div class="no-schedule" id="no-ratings">
+      <h3>No ratings yet</h3>
+      <p>Rate events in the Browse & Rate tab to see them here.</p>
+    </div>
+  </div>
+
+  <!-- Optimize -->
+  <div class="panel" id="panel-optimize">
+    <div class="opt-section">
+      <h3>Rating Summary</h3>
+      <div class="opt-stats" id="opt-stats"></div>
+      <div id="opt-errors"></div>
+      <div id="opt-warnings"></div>
+      <button class="opt-btn" id="opt-btn" onclick="runOptimize()">Generate Optimal Schedule</button>
+    </div>
+    <div id="opt-results"></div>
+  </div>
+
+  <!-- My Schedule -->
+  <div class="panel" id="panel-schedule">
+    <div class="sched-controls">
+      <button class="active" data-view="timeline" onclick="switchView('timeline',this)">Timeline</button>
+      <button data-view="list" onclick="switchView('list',this)">List</button>
+      <button class="export-btn" onclick="exportText()">Copy as Text</button>
+      <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+    </div>
+    <div id="sched-timeline"></div>
+    <div id="sched-list" style="display:none"></div>
+    <div class="no-schedule" id="no-schedule">
+      <h3>No schedule yet</h3>
+      <p>Rate some events and run the optimizer to generate your schedule.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== EMBEDDED CSV =====
+const CSV_RAW = `Subject,Start Date,Start Time,End Date,End Time,All Day Event,Description,Location,Private
+Open Gaming/Badge Pick Up Opens,05/20/2026,9:00 AM,05/20/2026,11:00 PM,False,Session: N/A,Rooks Con 2026,True
+Blood on the Clocktower - DEMO,05/20/2026,9:00 AM,05/20/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Dominion - DEMO,05/20/2026,9:00 AM,05/20/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Splendor - DEMO,05/20/2026,9:00 AM,05/20/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Nidavellir - DEMO,05/20/2026,9:00 AM,05/20/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Root - DEMO,05/20/2026,9:00 AM,05/20/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Kingdom Builder - DEMO,05/20/2026,9:00 AM,05/20/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Nidavellir - Heat 1-2,05/20/2026,10:00 AM,05/20/2026,11:00 AM,False,Session: Heat 1-2,Rooks Con 2026,True
+Flamecraft - DEMO,05/20/2026,10:00 AM,05/20/2026,11:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Wingspan - DEMO,05/20/2026,10:00 AM,05/20/2026,11:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Terraforming Mars - DEMO,05/20/2026,10:00 AM,05/20/2026,11:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Kingdomino - DEMO,05/20/2026,10:00 AM,05/20/2026,11:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Orleans - DEMO,05/20/2026,11:00 AM,05/20/2026,12:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Lords of Waterdeep - DEMO,05/20/2026,11:00 AM,05/20/2026,12:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Kingdomino - Heat 1-3,05/20/2026,11:00 AM,05/20/2026,12:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Lords of Waterdeep - Heat 1-3,05/20/2026,12:00 PM,05/20/2026,2:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Catan with Expansions - DEMO,05/20/2026,12:00 PM,05/20/2026,1:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Carcassonne - DEMO,05/20/2026,1:00 PM,05/20/2026,2:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Kingdom Builder - Heat 1-2,05/20/2026,1:00 PM,05/20/2026,2:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Carcassonne - Heat 1-3,05/20/2026,2:00 PM,05/20/2026,3:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Catan (Base Only) - DEMO,05/20/2026,2:00 PM,05/20/2026,3:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Catan with expansions - Heat 1-2,05/20/2026,3:00 PM,05/20/2026,5:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Root - Heat 1-3,05/20/2026,3:00 PM,05/20/2026,6:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Azul - DEMO,05/20/2026,4:00 PM,05/20/2026,5:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Orleans - Heat 1-2,05/20/2026,4:00 PM,05/20/2026,6:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Lost Ruins of Arnak - DEMO,05/20/2026,4:00 PM,05/20/2026,5:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Lords of Waterdeep - Heat 2-3,05/20/2026,5:00 PM,05/20/2026,7:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+7 Wonders - DEMO,05/20/2026,5:00 PM,05/20/2026,6:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Heat Pedal to the Medal - DEMO,05/20/2026,5:00 PM,05/20/2026,6:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Brass Birmingham - DEMO,05/20/2026,6:00 PM,05/20/2026,7:00 PM,False,Session: DEMO,Rooks Con 2026,True
+7 Wonders (Base) - Heat 1-3,05/20/2026,6:00 PM,05/20/2026,7:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Tyrants of the Underdark - DEMO,05/20/2026,6:00 PM,05/20/2026,7:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Wyrmspan - DMEO,05/20/2026,6:00 PM,05/20/2026,7:00 PM,False,Session: DMEO,Rooks Con 2026,True
+Terraforming Mars - Heat 1-3,05/20/2026,7:00 PM,05/20/2026,11:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+7 Wonders (Base) - Heat 2-3,05/20/2026,7:00 PM,05/20/2026,8:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+White Castle - DEMO,05/20/2026,7:00 PM,05/20/2026,8:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Casual Clocktower (no baubles/coasters/plaques) - Open Play,05/20/2026,8:00 PM,05/20/2026,11:00 PM,False,Session: Open Play,Rooks Con 2026,True
+7 Wonders (Base) - Heat 3-3,05/20/2026,8:00 PM,05/20/2026,9:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Kingdom Builder - Heat 2-2,05/20/2026,8:00 PM,05/20/2026,9:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+7 Wonders (Base) - Semi/Final,05/20/2026,9:00 PM,05/20/2026,11:00 PM,False,Session: Semi/Final,Rooks Con 2026,True
+Quacks - DEMO,05/20/2026,9:00 PM,05/20/2026,10:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Heat Pedal to the Medal - Heat 1-2,05/20/2026,9:00 PM,05/20/2026,11:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Magical Athlete - DEMO,05/20/2026,10:30 PM,05/20/2026,11:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Magical Athlete - Continuous,05/20/2026,11:00 PM,05/21/2026,1:00 AM,False,Session: Continuous,Rooks Con 2026,True
+Skyjo - DEMO,05/21/2026,9:00 AM,05/21/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+First Rat - DEMO,05/21/2026,9:00 AM,05/21/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Flamecraft - Heat 1-2,05/21/2026,9:00 AM,05/21/2026,11:00 AM,False,Session: Heat 1-2,Rooks Con 2026,True
+Mancala - DEMO,05/21/2026,9:00 AM,05/21/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+River of Gold - DEMO,05/21/2026,9:00 AM,05/21/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Ecos - DEMO,05/21/2026,9:00 AM,05/21/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Ark Nova - DEMO,05/21/2026,9:00 AM,05/21/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+First Rat - Heat 1-2,05/21/2026,10:00 AM,05/21/2026,12:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Quacks - Heat 1-4,05/21/2026,10:00 AM,05/21/2026,11:00 AM,False,Session: Heat 1-4,Rooks Con 2026,True
+Space Base - DEMO,05/21/2026,10:00 AM,05/21/2026,11:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Aquatica - DEMO,05/21/2026,10:00 AM,05/21/2026,11:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Small World - DEMO,05/21/2026,10:00 AM,05/21/2026,11:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Cthulhu Wars - DEMO,05/21/2026,11:00 AM,05/21/2026,12:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Lords of Waterdeep - Heat 3-3,05/21/2026,11:00 AM,05/21/2026,1:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Dominion (Base) - Heat 1-3,05/21/2026,11:00 AM,05/21/2026,12:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Trickerion - DEMO,05/21/2026,11:00 AM,05/21/2026,12:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Catan (Base Only) - Heat 1-3,05/21/2026,12:00 PM,05/21/2026,2:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Lost Ruins of Arnak - Heat 1-2,05/21/2026,12:00 PM,05/21/2026,3:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Cthulhu Wars - Heat 1-2,05/21/2026,12:00 PM,05/21/2026,4:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Tyrants of the Underdark - Heat 1-2,05/21/2026,12:00 PM,05/21/2026,2:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Wyrmspan - Heat 1-3,05/21/2026,1:00 PM,05/21/2026,4:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Aquatica - Heat 1-2,05/21/2026,1:00 PM,05/21/2026,2:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Lords of Waterdeep - SEMI,05/21/2026,1:00 PM,05/21/2026,3:00 PM,False,Session: SEMI,Rooks Con 2026,True
+Stonespine Architects - DEMO,05/21/2026,1:00 PM,05/21/2026,2:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Stonespine Architects - Heat 1-2,05/21/2026,2:00 PM,05/21/2026,3:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Azul - Heat 1-3,05/21/2026,2:00 PM,05/21/2026,3:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Space Base - Heat 1-4,05/21/2026,2:00 PM,05/21/2026,3:00 PM,False,Session: Heat 1-4,Rooks Con 2026,True
+Lords of Waterdeep - FINAL,05/21/2026,3:00 PM,05/21/2026,5:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Skyjo - Heat 1-3,05/21/2026,3:00 PM,05/21/2026,4:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+River of Gold - Heat 1-2,05/21/2026,3:00 PM,05/21/2026,5:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+First Rat - Heat 2-2,05/21/2026,4:00 PM,05/21/2026,6:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Catan with Expansions - Heat 2-2,05/21/2026,4:00 PM,05/21/2026,6:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Ecos - Heat 1-2,05/21/2026,4:00 PM,05/21/2026,6:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Root - Heat 2-3,05/21/2026,5:00 PM,05/21/2026,8:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Gravwell - DEMO,05/21/2026,5:00 PM,05/21/2026,6:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Celestia - DEMO,05/21/2026,5:00 PM,05/21/2026,6:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Stonespine Architects - Heat 2-2,05/21/2026,6:00 PM,05/21/2026,7:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Carcassonne - Heat 2-3,05/21/2026,6:00 PM,05/21/2026,7:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Ark Nova - Heat 1-3,05/21/2026,6:00 PM,05/21/2026,10:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Dominion - Heat 2-3,05/21/2026,7:00 PM,05/21/2026,8:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Terraforming Mars - Heat 2-3,05/21/2026,7:00 PM,05/21/2026,11:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Casual Clocktower (no baubles/coasters/plaques) - Open Play,05/21/2026,8:00 PM,05/21/2026,11:00 PM,False,Session: Open Play,Rooks Con 2026,True
+First Rat - FINAL,05/21/2026,8:00 PM,05/21/2026,10:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Quacks - Heat 2-4,05/21/2026,8:00 PM,05/21/2026,9:00 PM,False,Session: Heat 2-4,Rooks Con 2026,True
+Kingdomino - Heat 2-3,05/21/2026,9:00 PM,05/21/2026,10:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Space Base - Heat 2-3,05/21/2026,9:00 PM,05/21/2026,10:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Stonespine Architects - FINAL,05/21/2026,10:00 PM,05/21/2026,11:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Liars Dice - Continuous,05/21/2026,11:00 PM,05/22/2026,1:00 AM,False,Session: Continuous,Rooks Con 2026,True
+Explorers of the North Sea - DEMO,05/22/2026,9:00 AM,05/22/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Castles of Burgundy - DEMO,05/22/2026,9:00 AM,05/22/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Dune Imperium Uprising - DEMO,05/22/2026,9:00 AM,05/22/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Sagrada - DEMO,05/22/2026,9:00 AM,05/22/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Cascadia - DEMO,05/22/2026,9:00 AM,05/22/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Splendor - Heat 1-3,05/22/2026,9:00 AM,05/22/2026,10:00 AM,False,Session: Heat 1-3,Rooks Con 2026,True
+Catan (Base Only) - Heat 2-3,05/22/2026,9:00 AM,05/22/2026,11:00 AM,False,Session: Heat 2-3,Rooks Con 2026,True
+Trickerion - Heat 1-2,05/22/2026,9:00 AM,05/22/2026,12:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Ticket to Ride - DEMO,05/22/2026,10:00 AM,05/22/2026,11:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Dune Imperium Uprising - Heat 1-2,05/22/2026,10:00 AM,05/22/2026,1:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Explorers of the North Sea - Heat 1-2,05/22/2026,10:00 AM,05/22/2026,12:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Flamecraft - Heat 2-2,05/22/2026,10:00 AM,05/22/2026,12:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Ticket to Ride - Heat 1-4,05/22/2026,11:00 AM,05/22/2026,1:00 PM,False,Session: Heat 1-4,Rooks Con 2026,True
+Wyrmspan - Heat 2-3,05/22/2026,11:00 AM,05/22/2026,2:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Orleans - Heat 2-2,05/22/2026,11:00 AM,05/22/2026,1:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Space Base - Heat 3-4,05/22/2026,12:00 PM,05/22/2026,1:00 PM,False,Session: Heat 3-4,Rooks Con 2026,True
+Root - Heat 3-3,05/22/2026,12:00 PM,05/22/2026,3:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Cthulhu Wars - Heat 2-2,05/22/2026,12:00 PM,05/22/2026,4:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Splendor - Heat 2-3,05/22/2026,1:00 PM,05/22/2026,2:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+White Castle - Heat 1-2,05/22/2026,1:00 PM,05/22/2026,3:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Ark Nova - Heat 2-3,05/22/2026,1:00 PM,05/22/2026,5:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Flamecraft - FINAL,05/22/2026,2:00 PM,05/22/2026,4:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Azul - Heat 2-3,05/22/2026,2:00 PM,05/22/2026,3:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Brass Birmingham - Heat 1-2,05/22/2026,3:00 PM,05/22/2026,6:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Sagrada - Heat 1-2,05/22/2026,3:00 PM,05/22/2026,4:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Gravwell - Heat 1-3,05/22/2026,3:00 PM,05/22/2026,4:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Nidavellir - Heat 2-2,05/22/2026,4:00 PM,05/22/2026,5:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Harmonies - DEMO,05/22/2026,4:00 PM,05/22/2026,5:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Quacks - Heat 3-4,05/22/2026,4:00 PM,05/22/2026,5:00 PM,False,Session: Heat 3-4,Rooks Con 2026,True
+Cthulhu Wars - FINAL,05/22/2026,5:00 PM,05/22/2026,9:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Harmonies - Heat 1-2,05/22/2026,5:00 PM,05/22/2026,7:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Kingdom Builder - SEMI/FINAL,05/22/2026,5:00 PM,05/22/2026,7:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Exploeres of the North Sea - Heat 2-2,05/22/2026,6:00 PM,05/22/2026,8:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Heat Pedal to the Medal - Heat 2-2,05/22/2026,6:00 PM,05/22/2026,8:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Cascadia - Heat 1-3,05/22/2026,7:00 PM,05/22/2026,8:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Ecos - Heat 2-2,05/22/2026,7:00 PM,05/22/2026,9:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Casual Clocktower (no baubles/coasters/plaques) - Open Play,05/22/2026,8:00 PM,05/22/2026,11:00 PM,False,Session: Open Play,Rooks Con 2026,True
+Skyjo - Heat 2-3,05/22/2026,8:00 PM,05/22/2026,9:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Small World - Heat 1-2,05/22/2026,8:00 PM,05/22/2026,10:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Ticket to Ride - Heat 2-4,05/22/2026,9:00 PM,05/22/2026,11:00 PM,False,Session: Heat 2-4,Rooks Con 2026,True
+Orleans - FINAL,05/22/2026,9:00 PM,05/22/2026,11:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Celestia - Heat 1-2,05/22/2026,9:00 PM,05/22/2026,10:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+King of Tokyo - DEMO,05/22/2026,10:30 PM,05/23/2026,12:30 AM,False,Session: DEMO,Rooks Con 2026,True
+King of Tokyo - Continuous,05/22/2026,11:00 PM,05/23/2026,1:00 AM,False,Session: Continuous,Rooks Con 2026,True
+Castles of Burgundy - Heat 1-2,05/23/2026,9:00 AM,05/23/2026,12:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Brass Birmingham - Heat 2-2,05/23/2026,9:00 AM,05/23/2026,12:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Sagrada - Heat 2-2,05/23/2026,9:00 AM,05/23/2026,10:00 AM,False,Session: Heat 2-2,Rooks Con 2026,True
+Catan (Base Only) - Heat 3-3,05/23/2026,9:00 AM,05/23/2026,11:00 AM,False,Session: Heat 3-3,Rooks Con 2026,True
+Skyjo - Heat 3-3,05/23/2026,10:00 AM,05/23/2026,11:00 AM,False,Session: Heat 3-3,Rooks Con 2026,True
+Catan with Expansions - FINAL,05/23/2026,10:00 AM,05/23/2026,12:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Aquatica - Heat 2-2,05/23/2026,10:00 AM,05/23/2026,11:00 AM,False,Session: Heat 2-2,Rooks Con 2026,True
+Cascadia - Heat 2-3,05/23/2026,11:00 AM,05/23/2026,12:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Skyjo - FINAL,05/23/2026,11:00 AM,05/23/2026,12:00 PM,False,Session: FINAL,Rooks Con 2026,True
+SETI - DEMO,05/23/2026,11:00 AM,05/23/2026,12:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Nidavellir - FINAL,05/23/2026,12:00 PM,05/23/2026,1:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Splendor - Heat 3-3,05/23/2026,12:00 PM,05/23/2026,1:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Kingdomino - Heat 3-3,05/23/2026,12:00 PM,05/23/2026,1:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Ark Nova - Heat 3-3,05/23/2026,12:00 PM,05/23/2026,4:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Splendor - SEMI/FINAL,05/23/2026,1:00 PM,05/23/2026,3:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Ticket to Ride - Heat 3-4,05/23/2026,1:00 PM,05/23/2026,3:00 PM,False,Session: Heat 3-4,Rooks Con 2026,True
+River of Gold - Heat 2-2,05/23/2026,1:00 PM,05/23/2026,3:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Root - SEMI/FINAL,05/23/2026,2:00 PM,05/23/2026,7:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Tyrants of the Underdark - Heat 2-2,05/23/2026,2:00 PM,05/23/2026,4:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Wyrmspan - Heat 3-3,05/23/2026,2:00 PM,05/23/2026,5:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Brass Birmingham - FINAL,05/23/2026,3:00 PM,05/23/2026,6:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Harmonies - Heat 2-2,05/23/2026,3:00 PM,05/23/2026,5:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Potion Explosion - DEMO,05/23/2026,3:00 PM,05/23/2026,4:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Dominion - Heat 3-3,05/23/2026,4:00 PM,05/23/2026,5:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Carcassonne - Heat 3-3,05/23/2026,4:00 PM,05/23/2026,5:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Taverns of Tiefenthal - DEMO,05/23/2026,4:00 PM,05/23/2026,5:00 PM,False,Session: DEMO,Rooks Con 2026,True
+Trickerion - Heat 2-2,05/23/2026,4:00 PM,05/23/2026,7:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Taverns of Tiefenthal - Heat 1-2,05/23/2026,5:00 PM,05/23/2026,7:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Tyrants of the Underdark - FINAL,05/23/2026,5:00 PM,05/23/2026,7:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Terraforming Mars - Heat 3-3,05/23/2026,5:00 PM,05/23/2026,9:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+SETI - Heat 1-2,05/23/2026,6:00 PM,05/23/2026,10:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Lost Ruins of Arnak - Heat 2-2,05/23/2026,6:00 PM,05/23/2026,9:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Dominion - SEMI/FINAL,05/23/2026,6:00 PM,05/23/2026,8:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Aquatica - SEMI/FINAL,05/23/2026,6:00 PM,05/23/2026,8:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Harmonies - FINAL,05/23/2026,7:00 PM,05/23/2026,9:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Azul - Heat 3-3,05/23/2026,7:00 PM,05/23/2026,8:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Wyrmspan - SEMI,05/23/2026,7:00 PM,05/23/2026,10:00 PM,False,Session: SEMI,Rooks Con 2026,True
+Casual Clocktower (no baubles/coasters/plaques) - Open Play,05/23/2026,8:00 PM,05/23/2026,11:00 PM,False,Session: Open Play,Rooks Con 2026,True
+Bluey Keepy Uppy - Continuous,05/23/2026,8:00 PM,05/23/2026,10:00 PM,False,Session: Continuous,Rooks Con 2026,True
+Wingspan - Heat 1-3,05/23/2026,8:00 PM,05/23/2026,11:00 PM,False,Session: Heat 1-3,Rooks Con 2026,True
+Cascadia - Heat 3-3,05/23/2026,8:00 PM,05/23/2026,9:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Cascadia - SEMI,05/23/2026,9:00 PM,05/23/2026,10:00 PM,False,Session: SEMI,Rooks Con 2026,True
+Lost Ruins of Arnak - FINAL,05/23/2026,9:00 PM,05/24/2026,12:00 AM,False,Session: FINAL,Rooks Con 2026,True
+Small World - Heat 2-2,05/23/2026,9:00 PM,05/23/2026,11:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Sagrada - FINAL,05/23/2026,10:00 PM,05/23/2026,11:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Poker Tournament - Continuous,05/23/2026,11:00 PM,05/24/2026,1:00 AM,False,Session: Continuous,Rooks Con 2026,True
+Taverns of Tiefenthal - Heat 2-2,05/24/2026,9:00 AM,05/24/2026,11:00 AM,False,Session: Heat 2-2,Rooks Con 2026,True
+Dune Imperium Uprising - Heat 2-2,05/24/2026,9:00 AM,05/24/2026,12:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Scythe - DEMO,05/24/2026,9:00 AM,05/24/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Celstia - Heat 2-2,05/24/2026,9:00 AM,05/24/2026,10:00 AM,False,Session: Heat 2-2,Rooks Con 2026,True
+Terraforming Mars - SEMI/FINAL,05/24/2026,10:00 AM,05/24/2026,4:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+UnMatched - DEMO,05/24/2026,10:00 AM,05/24/2026,11:00 AM,False,Session: DEMO,Rooks Con 2026,True
+Scythe - Heat 1-2,05/24/2026,10:00 AM,05/24/2026,1:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Ark Nova - SEMI,05/24/2026,10:00 AM,05/24/2026,2:00 PM,False,Session: SEMI,Rooks Con 2026,True
+Explorers of the North Sea - FINAL,05/24/2026,11:00 AM,05/24/2026,1:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Wingspan - Heat 2-3,05/24/2026,11:00 AM,05/24/2026,2:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Carcassonne - SEMI/FINAL,05/24/2026,12:00 PM,05/24/2026,2:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Potion Explosion - Heat 1-2,05/24/2026,12:00 PM,05/24/2026,1:00 PM,False,Session: Heat 1-2,Rooks Con 2026,True
+Gravwell - Heat 2-3,05/24/2026,12:00 PM,05/24/2026,1:00 PM,False,Session: Heat 2-3,Rooks Con 2026,True
+Celestia - SEMI/FINAL,05/24/2026,12:00 PM,05/24/2026,2:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Kingdomino - SEMI/FINAL,05/24/2026,1:00 PM,05/24/2026,3:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Castles of Burgundy - Heat 2-2,05/24/2026,1:00 PM,05/24/2026,4:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Heat Pedal to the Medal - FINAL,05/24/2026,1:00 PM,05/24/2026,3:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Ticket to Ride - Heat 4-4,05/24/2026,2:00 PM,05/24/2026,4:00 PM,False,Session: Heat 4-4,Rooks Con 2026,True
+Space Base - Heat 4-4,05/24/2026,2:00 PM,05/24/2026,3:00 PM,False,Session: Heat 4-4,Rooks Con 2026,True
+River of Gold - SEMI/FINAL,05/24/2026,2:00 PM,05/24/2026,5:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+White Castle - Heat 2-2,05/24/2026,3:00 PM,05/24/2026,5:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Wyrmspan - FINAL,05/24/2026,3:00 PM,05/24/2026,6:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Catan (Base Only) - SEMI,05/24/2026,3:00 PM,05/24/2026,5:00 PM,False,Session: SEMI,Rooks Con 2026,True
+Ark Nova - FINAL,05/24/2026,3:00 PM,05/24/2026,7:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Potion Explosion - Heat 2-2,05/24/2026,4:00 PM,05/24/2026,5:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Taverns of Tiefenthal - SEMI/FINAL,05/24/2026,4:00 PM,05/24/2026,7:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Scythe - Heat 2-2,05/24/2026,4:00 PM,05/24/2026,7:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Ticket to Ride - SEMI,05/24/2026,5:00 PM,05/24/2026,7:00 PM,False,Session: SEMI,Rooks Con 2026,True
+Wingspan - Heat 3-3,05/24/2026,5:00 PM,05/24/2026,8:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+SETI - Heat 2-2,05/24/2026,5:00 PM,05/24/2026,9:00 PM,False,Session: Heat 2-2,Rooks Con 2026,True
+Space Base - SEMI,05/24/2026,6:00 PM,05/24/2026,7:00 PM,False,Session: SEMI,Rooks Con 2026,True
+Ecos - FINAL,05/24/2026,6:00 PM,05/24/2026,8:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Quacks - Heat 4-4,05/24/2026,6:00 PM,05/24/2026,7:00 PM,False,Session: Heat 4-4,Rooks Con 2026,True
+Azul - SEMI/FINAL,05/24/2026,7:00 PM,05/24/2026,9:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Quacks - SEMI,05/24/2026,7:00 PM,05/24/2026,8:00 PM,False,Session: SEMI,Rooks Con 2026,True
+Gravwell - Heat 3-3,05/24/2026,7:00 PM,05/24/2026,8:00 PM,False,Session: Heat 3-3,Rooks Con 2026,True
+Small World - SEMI/FINAL,05/24/2026,7:00 PM,05/24/2026,10:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+Casual Clocktower (no baubles/coasters/plaques) - Open Play,05/24/2026,8:00 PM,05/24/2026,11:00 PM,False,Session: Open Play,Rooks Con 2026,True
+Dune Imperium Uprising - FINAL,05/24/2026,8:00 PM,05/24/2026,11:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Wingspan - SEMI,05/24/2026,8:00 PM,05/24/2026,11:00 PM,False,Session: SEMI,Rooks Con 2026,True
+Space Base - FINAL,05/24/2026,8:00 PM,05/24/2026,9:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Potion Explosion - FINAL,05/24/2026,9:00 PM,05/24/2026,10:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Mancala - Continuous,05/24/2026,9:00 PM,05/24/2026,11:00 PM,False,Session: Continuous,Rooks Con 2026,True
+White Castle - FINAL,05/24/2026,9:00 PM,05/24/2026,11:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Love Letter - Continuous,05/24/2026,11:00 PM,05/25/2026,12:00 AM,False,Session: Continuous,Rooks Con 2026,True
+Castles of Burgundy - FINAL,05/25/2026,9:00 AM,05/25/2026,12:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Scythe - FINAL,05/25/2026,9:00 AM,05/25/2026,12:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Quacks - FINAL,05/25/2026,9:00 AM,05/25/2026,10:00 AM,False,Session: FINAL,Rooks Con 2026,True
+Catan (Base Only) - FINAL,05/25/2026,9:00 AM,05/25/2026,11:00 AM,False,Session: FINAL,Rooks Con 2026,True
+SETI - FINAL,05/25/2026,9:00 AM,05/25/2026,1:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Wingspan - FINAL,05/25/2026,10:00 AM,05/25/2026,1:00 PM,False,Session: FINAL,Rooks Con 2026,True
+UnMatched - Continuous,05/25/2026,10:00 AM,05/25/2026,1:00 PM,False,Session: Continuous,Rooks Con 2026,True
+Trickerion - FINAL,05/25/2026,10:00 AM,05/25/2026,1:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Cascadia - FINAL,05/25/2026,11:00 AM,05/25/2026,12:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Ticket to Ride - FINAL,05/25/2026,12:00 PM,05/25/2026,2:00 PM,False,Session: FINAL,Rooks Con 2026,True
+Gravwell - SEMI/FINAL,05/25/2026,12:00 PM,05/25/2026,2:00 PM,False,Session: SEMI/FINAL,Rooks Con 2026,True
+End of Con Scattergories/Trivia - Continuous,05/25/2026,2:00 PM,05/25/2026,4:00 PM,False,Session: Continuous,Rooks Con 2026,True`;
+
+// ===== TYPO CORRECTIONS =====
+const TYPO_MAP = {
+  'DMEO': 'DEMO',
+  'Exploeres': 'Explorers',
+  'Celstia': 'Celestia'
+};
+
+// ===== STATE =====
+let events = [];
+let chains = {};
+let ratings = {};       // id -> 'must' | 'interested' | 'ifit' | 'skip'
+let autoHeats = {};     // id -> true, tracks auto-selected heat ratings
+let schedule = null;    // array of event ids after optimization
+const DAY_NAMES = ['Wed May 20', 'Thu May 21', 'Fri May 22', 'Sat May 23', 'Sun May 24', 'Mon May 25'];
+const DAY_LABELS = ['Wednesday, May 20', 'Thursday, May 21', 'Friday, May 22', 'Saturday, May 23', 'Sunday, May 24', 'Monday, May 25'];
+
+// ===== CSV PARSING =====
+function parseCSV(raw) {
+  const lines = raw.trim().split('\n');
+  const result = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    if (cols.length < 5) continue;
+    let subject = cols[0].trim();
+    // Apply typo corrections
+    for (const [typo, fix] of Object.entries(TYPO_MAP)) {
+      subject = subject.replace(typo, fix);
+    }
+    const startDate = cols[1].trim();
+    const startTimeStr = cols[2].trim();
+    const endDate = cols[3].trim();
+    const endTimeStr = cols[4].trim();
+    const startTime = parseDateTime(startDate, startTimeStr);
+    const endTime = parseDateTime(endDate, endTimeStr);
+    // Extract game name and session type
+    let gameName, sessionType;
+    const sepIdx = subject.lastIndexOf(' - ');
+    if (sepIdx > 0) {
+      gameName = subject.substring(0, sepIdx).trim();
+      sessionType = subject.substring(sepIdx + 3).trim();
+    } else {
+      gameName = subject;
+      sessionType = 'N/A';
+    }
+    // Fix session type typos
+    for (const [typo, fix] of Object.entries(TYPO_MAP)) {
+      sessionType = sessionType.replace(typo, fix);
+    }
+    const dayIndex = getDayIndex(startTime);
+    const duration = (endTime - startTime) / (1000 * 60); // minutes
+    result.push({
+      id: i,
+      subject,
+      gameName,
+      sessionType,
+      startTime,
+      endTime,
+      dayIndex,
+      duration,
+      startDate,
+      startTimeStr,
+      endDate,
+      endTimeStr
+    });
+  }
+  return result;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { result.push(current); current = ''; }
+      else { current += ch; }
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+function parseDateTime(dateStr, timeStr) {
+  const [month, day, year] = dateStr.split('/').map(Number);
+  let [timePart, ampm] = timeStr.split(' ');
+  let [hours, minutes] = timePart.split(':').map(Number);
+  if (ampm === 'PM' && hours !== 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  return new Date(year, month - 1, day, hours, minutes);
+}
+
+function getDayIndex(date) {
+  const day = date.getDate();
+  const month = date.getMonth();
+  // May 20 = 0, May 21 = 1, etc. Handle midnight crossings (still belongs to previous day's "block")
+  if (month === 4) { // May
+    if (day >= 20 && day <= 25) return day - 20;
+  }
+  return -1; // shouldn't happen
+}
+
+// ===== TOURNAMENT CHAINS =====
+function detectChains(events) {
+  const byGame = {};
+  events.forEach(e => {
+    if (!byGame[e.gameName]) byGame[e.gameName] = [];
+    byGame[e.gameName].push(e);
+  });
+  const result = {};
+  for (const [game, evts] of Object.entries(byGame)) {
+    const types = evts.map(e => classifySessionType(e.sessionType));
+    const hasHeat = types.includes('heat');
+    const hasSemi = types.includes('semi');
+    const hasFinal = types.includes('final');
+    if (hasHeat && (hasSemi || hasFinal)) {
+      result[game] = { heats: [], semis: [], finals: [] };
+      evts.forEach(e => {
+        const t = classifySessionType(e.sessionType);
+        if (t === 'heat') result[game].heats.push(e.id);
+        else if (t === 'semi') result[game].semis.push(e.id);
+        else if (t === 'final') result[game].finals.push(e.id);
+      });
+    }
+  }
+  return result;
+}
+
+function classifySessionType(st) {
+  const u = st.toUpperCase();
+  if (u.includes('HEAT')) return 'heat';
+  if (u.includes('SEMI') && u.includes('FINAL')) return 'final'; // SEMI/FINAL counts as final
+  if (u.includes('SEMI')) return 'semi';
+  if (u.includes('FINAL')) return 'final';
+  return 'other';
+}
+
+function getSessionBadgeClass(st) {
+  const u = st.toUpperCase();
+  if (u === 'DEMO' || u === 'DMEO') return 'badge-demo';
+  if (u.includes('HEAT')) return 'badge-heat';
+  if (u.includes('SEMI') && u.includes('FINAL')) return 'badge-final';
+  if (u.includes('SEMI')) return 'badge-semi';
+  if (u.includes('FINAL')) return 'badge-final';
+  if (u.includes('CONTINUOUS')) return 'badge-continuous';
+  if (u.includes('OPEN PLAY')) return 'badge-openplay';
+  return 'badge-na';
+}
+
+// ===== PERSISTENCE =====
+const STORAGE_KEY = 'rookscon2026_ratings';
+const SCHEDULE_KEY = 'rookscon2026_schedule';
+const AUTOHEATS_KEY = 'rookscon2026_autoheats';
+
+function saveRatings() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ratings)); } catch (e) {}
+}
+function loadRatings() {
+  try {
+    const d = localStorage.getItem(STORAGE_KEY);
+    if (d) ratings = JSON.parse(d);
+  } catch (e) {}
+}
+function saveAutoHeats() {
+  try { localStorage.setItem(AUTOHEATS_KEY, JSON.stringify(autoHeats)); } catch (e) {}
+}
+function loadAutoHeats() {
+  try {
+    const d = localStorage.getItem(AUTOHEATS_KEY);
+    if (d) autoHeats = JSON.parse(d);
+  } catch (e) {}
+}
+function saveSchedule() {
+  try { localStorage.setItem(SCHEDULE_KEY, JSON.stringify(schedule)); } catch (e) {}
+}
+function loadSchedule() {
+  try {
+    const d = localStorage.getItem(SCHEDULE_KEY);
+    if (d) schedule = JSON.parse(d);
+  } catch (e) {}
+}
+
+// ===== HELPERS =====
+function formatTime(date) {
+  let h = date.getHours(), m = date.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return m === 0 ? `${h} ${ampm}` : `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+function formatTimeRange(e) {
+  return `${formatTime(e.startTime)} - ${formatTime(e.endTime)}`;
+}
+
+function formatDuration(mins) {
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+function eventsOverlap(a, b) {
+  return a.startTime < b.endTime && b.startTime < a.endTime;
+}
+
+function getEventById(id) {
+  return events.find(e => e.id === id);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== CONFLICT DETECTION =====
+function findConflicts(eventId) {
+  const ev = getEventById(eventId);
+  if (!ev) return [];
+  return events.filter(e =>
+    e.id !== eventId &&
+    ratings[e.id] && ratings[e.id] !== 'skip' &&
+    eventsOverlap(ev, e)
+  );
+}
+
+// ===== RENDER: BROWSE & RATE =====
+function renderEventList() {
+  const container = document.getElementById('events-container');
+  const search = document.getElementById('search-box').value.toLowerCase();
+  const gameFilter = document.getElementById('filter-game').value;
+  const dayFilter = document.getElementById('filter-day').value;
+  const typeFilter = document.getElementById('filter-type').value;
+  const ratingFilter = document.getElementById('filter-rating').value;
+
+  // Group by day
+  const grouped = {};
+  events.forEach(e => {
+    // Filter
+    if (search && !e.subject.toLowerCase().includes(search) && !e.gameName.toLowerCase().includes(search)) return;
+    if (gameFilter && e.gameName !== gameFilter) return;
+    if (dayFilter && e.dayIndex !== parseInt(dayFilter)) return;
+    if (typeFilter) {
+      const cls = classifySessionType(e.sessionType);
+      const u = e.sessionType.toUpperCase();
+      if (typeFilter === 'demo' && u !== 'DEMO') return;
+      if (typeFilter === 'heat' && cls !== 'heat') return;
+      if (typeFilter === 'semi' && cls !== 'semi') return;
+      if (typeFilter === 'final' && cls !== 'final') return;
+      if (typeFilter === 'other' && ['DEMO', 'heat', 'semi', 'final'].includes(cls === 'other' ? '' : cls) && u !== 'DEMO') {
+        if (cls !== 'other') return;
+      }
+      if (typeFilter === 'other' && (u === 'DEMO' || cls === 'heat' || cls === 'semi' || cls === 'final')) return;
+    }
+    if (ratingFilter) {
+      const r = ratings[e.id];
+      if (ratingFilter === 'unrated' && r) return;
+      if (ratingFilter !== 'unrated' && r !== ratingFilter) return;
+    }
+    if (!grouped[e.dayIndex]) grouped[e.dayIndex] = [];
+    grouped[e.dayIndex].push(e);
+  });
+
+  let html = '';
+  const dayIndices = Object.keys(grouped).map(Number).sort();
+  for (const di of dayIndices) {
+    const dayEvents = grouped[di];
+    dayEvents.sort((a, b) => a.startTime - b.startTime);
+    const ratedCount = dayEvents.filter(e => ratings[e.id]).length;
+    html += `<div class="day-group">`;
+    html += `<div class="day-header"><h2>${DAY_LABELS[di]} <span>${ratedCount}/${dayEvents.length} rated</span></h2></div>`;
+    html += `<div class="events-list">`;
+    for (const e of dayEvents) {
+      const r = ratings[e.id] || '';
+      const rClass = r ? `rating-${r}` : '';
+      const conflicts = findConflicts(e.id);
+      html += `<div class="event-card ${rClass}" data-id="${e.id}">`;
+      html += `<div class="card-top">`;
+      html += `<span class="game-name">${esc(e.gameName)}</span>`;
+      html += `<span class="session-badge ${getSessionBadgeClass(e.sessionType)}">${esc(e.sessionType)}</span>`;
+      html += `</div>`;
+      html += `<div class="time-info">${formatTimeRange(e)} &bull; ${formatDuration(e.duration)}</div>`;
+      html += `<div class="rating-btns">`;
+      html += ratingButton(e.id, 'must', 'Must Attend', r);
+      html += ratingButton(e.id, 'interested', 'Interested', r);
+      html += ratingButton(e.id, 'ifit', 'If It Fits', r);
+      html += ratingButton(e.id, 'skip', 'Skip', r);
+      html += `</div>`;
+      if (conflicts.length > 0) {
+        html += `<div class="conflict-warn">Conflicts with: ${conflicts.map(c => esc(c.gameName + ' (' + formatTime(c.startTime) + ')')).join(', ')}</div>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div></div>`;
+  }
+  container.innerHTML = html || '<div class="no-schedule"><h3>No events match filters</h3></div>';
+  updateProgress();
+  renderRatingsPanel();
+}
+
+function ratingButton(eventId, rating, label, current) {
+  const active = current === rating ? `active-${rating}` : '';
+  return `<button class="rating-btn ${active}" onclick="setRating(${eventId},'${rating}')">${label}</button>`;
+}
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function setRating(id, rating) {
+  const wasToggleOff = ratings[id] === rating;
+  if (wasToggleOff) {
+    delete ratings[id]; // toggle off
+  } else {
+    ratings[id] = rating;
+  }
+
+  // Auto-heat logic for tournament chains
+  const ev = getEventById(id);
+  if (ev) {
+    const chain = chains[ev.gameName];
+    if (chain) {
+      const cls = classifySessionType(ev.sessionType);
+      if (cls === 'final' || cls === 'semi') {
+        if (wasToggleOff) {
+          // Un-rating a semi/final: remove auto-selected heat for this game
+          removeAutoHeat(ev.gameName);
+        } else if (rating === 'must' || rating === 'interested') {
+          autoSelectHeat(ev.gameName, rating);
+        }
+      }
+    }
+  }
+
+  saveRatings();
+  renderEventList();
+}
+
+function autoSelectHeat(gameName, rating) {
+  const chain = chains[gameName];
+  if (!chain || chain.heats.length === 0) return;
+
+  // Skip if user already manually rated any heat for this game
+  const hasManualHeat = chain.heats.some(hid => ratings[hid] && ratings[hid] !== 'skip' && !autoHeats[hid]);
+  if (hasManualHeat) return;
+
+  // Remove any previous auto-heat for this game before picking a new one
+  chain.heats.forEach(hid => {
+    if (autoHeats[hid]) {
+      delete ratings[hid];
+      delete autoHeats[hid];
+    }
+  });
+
+  // For each heat, count conflicts with currently-rated non-skip events (excluding same-game events)
+  const heatScores = chain.heats.map(hid => {
+    const heatEv = getEventById(hid);
+    let conflicts = 0;
+    events.forEach(e => {
+      if (e.id === hid) return;
+      if (e.gameName === gameName) return; // don't count same-game events
+      if (!ratings[e.id] || ratings[e.id] === 'skip') return;
+      if (eventsOverlap(heatEv, e)) conflicts++;
+    });
+    return { id: hid, conflicts, startTime: heatEv.startTime, sessionType: heatEv.sessionType };
+  });
+
+  // Pick heat with fewest conflicts; tie-break by earliest start time
+  heatScores.sort((a, b) => a.conflicts - b.conflicts || a.startTime - b.startTime);
+  const best = heatScores[0];
+
+  ratings[best.id] = rating;
+  autoHeats[best.id] = true;
+  saveAutoHeats();
+
+  const conflictNote = best.conflicts > 0 ? ` (${best.conflicts} conflict${best.conflicts > 1 ? 's' : ''})` : '';
+  showToast(`Auto-selected ${gameName} ${getEventById(best.id).sessionType}${conflictNote}`);
+}
+
+function removeAutoHeat(gameName) {
+  const chain = chains[gameName];
+  if (!chain) return;
+  chain.heats.forEach(hid => {
+    if (autoHeats[hid]) {
+      delete ratings[hid];
+      delete autoHeats[hid];
+    }
+  });
+  saveAutoHeats();
+}
+
+function updateProgress() {
+  const rated = Object.keys(ratings).length;
+  const total = events.length;
+  document.getElementById('progress-text').textContent = `${rated} / ${total} rated`;
+  document.getElementById('progress-badge').textContent = `${rated}/${total}`;
+}
+
+// ===== RENDER: MY RATINGS PANEL =====
+function renderRatingsPanel() {
+  const container = document.getElementById('ratings-container');
+  const noRatings = document.getElementById('no-ratings');
+  const groups = { must: [], interested: [], ifit: [], skip: [] };
+  const labels = { must: 'Must Attend', interested: 'Interested', ifit: 'If It Fits', skip: 'Skip' };
+  const headerClasses = { must: 'rg-header-must', interested: 'rg-header-interested', ifit: 'rg-header-ifit', skip: 'rg-header-skip' };
+
+  events.forEach(e => {
+    const r = ratings[e.id];
+    if (r && groups[r]) groups[r].push(e);
+  });
+
+  // Sort each group by start time
+  Object.values(groups).forEach(g => g.sort((a, b) => a.startTime - b.startTime));
+
+  const totalRated = Object.values(groups).reduce((s, g) => s + g.length, 0);
+  document.getElementById('ratings-badge').textContent = totalRated;
+
+  if (totalRated === 0) {
+    container.innerHTML = '';
+    noRatings.style.display = '';
+    return;
+  }
+  noRatings.style.display = 'none';
+
+  let html = '';
+  for (const [key, evts] of Object.entries(groups)) {
+    if (evts.length === 0) continue;
+    html += `<div class="rating-group">`;
+    html += `<div class="rg-header ${headerClasses[key]}" onclick="toggleRatingGroup(this)"><span>${labels[key]} (${evts.length})</span><span class="rg-toggle">&#9660;</span></div>`;
+    html += `<div class="rg-items">`;
+    for (const e of evts) {
+      html += `<div class="rg-item">`;
+      html += `<span class="rg-name">${esc(e.gameName)} <span class="session-badge ${getSessionBadgeClass(e.sessionType)}" style="font-size:0.65rem">${esc(e.sessionType)}</span></span>`;
+      html += `<span class="rg-time">${DAY_NAMES[e.dayIndex]} ${formatTimeRange(e)}</span>`;
+      html += `<div class="rating-btns">`;
+      html += ratingButton(e.id, 'must', 'Must', ratings[e.id]);
+      html += ratingButton(e.id, 'interested', 'Int.', ratings[e.id]);
+      html += ratingButton(e.id, 'ifit', 'Fits', ratings[e.id]);
+      html += ratingButton(e.id, 'skip', 'Skip', ratings[e.id]);
+      html += `</div></div>`;
+    }
+    html += `</div></div>`;
+  }
+  container.innerHTML = html;
+}
+
+function toggleRatingGroup(header) {
+  header.classList.toggle('collapsed');
+  header.nextElementSibling.classList.toggle('collapsed');
+}
+
+// ===== BULK ACTIONS =====
+function renderBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  // Unique session types
+  const types = [...new Set(events.map(e => e.sessionType.toUpperCase()))].sort();
+  // Unique game names (top games with most events)
+  const gameCounts = {};
+  events.forEach(e => { gameCounts[e.gameName] = (gameCounts[e.gameName] || 0) + 1; });
+  const topGames = Object.entries(gameCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  let html = '<span style="font-size:0.8rem;color:var(--text-muted);font-weight:600;">Bulk:</span> ';
+  html += `<button class="bulk-btn" onclick="bulkSkipType('DEMO')">Skip all DEMOs</button>`;
+  html += `<button class="bulk-btn" onclick="bulkSkipType('Open Play')">Skip Open Play</button>`;
+  html += `<button class="bulk-btn" onclick="bulkSkipType('Continuous')">Skip Continuous</button>`;
+  for (const [game] of topGames.slice(0, 6)) {
+    html += `<button class="bulk-btn" onclick="bulkRateGame('${esc(game.replace(/'/g, "\\'"))}')">${esc(game)}</button>`;
+  }
+  bar.innerHTML = html;
+}
+
+function bulkSkipType(type) {
+  const typeUpper = type.toUpperCase();
+  let count = 0;
+  events.forEach(e => {
+    if (e.sessionType.toUpperCase() === typeUpper || e.sessionType.toUpperCase().includes(typeUpper)) {
+      if (!ratings[e.id]) {
+        ratings[e.id] = 'skip';
+        count++;
+      }
+    }
+  });
+  saveRatings();
+  renderEventList();
+  showToast(`Skipped ${count} ${type} events`);
+}
+
+function bulkRateGame(gameName) {
+  const gameEvents = events.filter(e => e.gameName === gameName);
+  const options = ['interested', 'ifit', 'skip'];
+  const labels = ['Interested', 'If It Fits', 'Skip'];
+  const currentRating = ratings[gameEvents[0]?.id];
+  const nextIdx = currentRating ? (options.indexOf(currentRating) + 1) % options.length : 0;
+  const rating = options[nextIdx];
+  let count = 0;
+  gameEvents.forEach(e => {
+    ratings[e.id] = rating;
+    count++;
+  });
+  saveRatings();
+  renderEventList();
+  showToast(`Rated ${count} ${gameName} events as "${labels[nextIdx]}"`);
+}
+
+// ===== POPULATE FILTERS =====
+function populateFilters() {
+  const gameSelect = document.getElementById('filter-game');
+  const gameNames = [...new Set(events.map(e => e.gameName))].sort();
+  gameNames.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    gameSelect.appendChild(opt);
+  });
+
+  const daySelect = document.getElementById('filter-day');
+  DAY_LABELS.forEach((label, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = label;
+    daySelect.appendChild(opt);
+  });
+
+  const typeSelect = document.getElementById('filter-type');
+  ['demo', 'heat', 'semi', 'final', 'other'].forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t === 'demo' ? 'DEMO' : t === 'heat' ? 'Heat' : t === 'semi' ? 'Semi' : t === 'final' ? 'Final' : 'Other';
+    typeSelect.appendChild(opt);
+  });
+  typeSelect.value = 'final';
+}
+
+// ===== RENDER: OPTIMIZE PANEL =====
+function renderOptimizePanel() {
+  const statsDiv = document.getElementById('opt-stats');
+  const mustCount = events.filter(e => ratings[e.id] === 'must').length;
+  const intCount = events.filter(e => ratings[e.id] === 'interested').length;
+  const ifitCount = events.filter(e => ratings[e.id] === 'ifit').length;
+  const skipCount = events.filter(e => ratings[e.id] === 'skip').length;
+  const unrated = events.length - mustCount - intCount - ifitCount - skipCount;
+
+  statsDiv.innerHTML = `
+    <div class="stat-card stat-must"><div class="num">${mustCount}</div><div class="label">Must Attend</div></div>
+    <div class="stat-card stat-interested"><div class="num">${intCount}</div><div class="label">Interested</div></div>
+    <div class="stat-card stat-ifit"><div class="num">${ifitCount}</div><div class="label">If It Fits</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--skip)">${skipCount}</div><div class="label">Skip</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--text-muted)">${unrated}</div><div class="label">Unrated</div></div>
+  `;
+
+  // Check locked conflicts
+  const errDiv = document.getElementById('opt-errors');
+  const locked = events.filter(e => ratings[e.id] === 'must');
+  const lockedConflicts = [];
+  for (let i = 0; i < locked.length; i++) {
+    for (let j = i + 1; j < locked.length; j++) {
+      if (eventsOverlap(locked[i], locked[j])) {
+        lockedConflicts.push([locked[i], locked[j]]);
+      }
+    }
+  }
+  if (lockedConflicts.length > 0) {
+    errDiv.innerHTML = `<div class="opt-error"><strong>Conflicting Must Attend events!</strong> Resolve these before optimizing:<ul>${
+      lockedConflicts.map(([a, b]) => `<li>${esc(a.gameName)} vs ${esc(b.gameName)} (${DAY_NAMES[a.dayIndex]})</li>`).join('')
+    }</ul></div>`;
+    document.getElementById('opt-btn').disabled = true;
+  } else {
+    errDiv.innerHTML = '';
+    document.getElementById('opt-btn').disabled = false;
+  }
+
+  // Chain warnings
+  const warnDiv = document.getElementById('opt-warnings');
+  const warnings = [];
+  for (const [game, chain] of Object.entries(chains)) {
+    const semiFinalIds = [...chain.semis, ...chain.finals];
+    const heatIds = chain.heats;
+    const hasSemiOrFinalRated = semiFinalIds.some(id => ratings[id] && ratings[id] !== 'skip');
+    const hasAnyHeatRated = heatIds.some(id => ratings[id] && ratings[id] !== 'skip');
+    if (hasSemiOrFinalRated && !hasAnyHeatRated) {
+      warnings.push(`${game}: You rated a Semi/Final but no Heats`);
+    }
+  }
+  if (warnings.length > 0) {
+    warnDiv.innerHTML = `<div class="opt-warnings"><strong>Tournament chain warnings:</strong><ul>${
+      warnings.map(w => `<li>${esc(w)}</li>`).join('')
+    }</ul></div>`;
+  } else {
+    warnDiv.innerHTML = '';
+  }
+
+  // Show previous results if available
+  if (schedule) {
+    renderOptResults();
+  }
+}
+
+function renderOptResults() {
+  const div = document.getElementById('opt-results');
+  if (!schedule || schedule.length === 0) {
+    div.innerHTML = '<div class="opt-section"><h3>No events selected</h3><p>Rate some events and try again.</p></div>';
+    return;
+  }
+  const sched = schedule.map(id => getEventById(id)).filter(Boolean).sort((a, b) => a.startTime - b.startTime);
+  const byDay = {};
+  sched.forEach(e => {
+    if (!byDay[e.dayIndex]) byDay[e.dayIndex] = [];
+    byDay[e.dayIndex].push(e);
+  });
+
+  let html = `<div class="opt-section"><h3>Optimized Schedule (${sched.length} events)</h3>`;
+  for (const di of Object.keys(byDay).map(Number).sort()) {
+    html += `<h4 style="margin:12px 0 6px;color:var(--text-muted);font-size:0.85rem">${DAY_LABELS[di]}</h4>`;
+    for (const e of byDay[di]) {
+      const r = ratings[e.id] || 'interested';
+      html += `<div class="opt-result-item"><span class="dot dot-${r}"></span><span class="ri-name">${esc(e.gameName)} <span class="session-badge ${getSessionBadgeClass(e.sessionType)}" style="font-size:0.65rem">${esc(e.sessionType)}</span></span><span class="ri-time">${formatTimeRange(e)}</span></div>`;
+    }
+  }
+  html += '</div>';
+  div.innerHTML = html;
+}
+
+// ===== OPTIMIZATION: WEIGHTED INTERVAL SCHEDULING =====
+function runOptimize() {
+  const locked = events.filter(e => ratings[e.id] === 'must');
+  // Validate locked don't conflict
+  for (let i = 0; i < locked.length; i++) {
+    for (let j = i + 1; j < locked.length; j++) {
+      if (eventsOverlap(locked[i], locked[j])) {
+        showToast('Cannot optimize: conflicting Must Attend events!');
+        return;
+      }
+    }
+  }
+
+  // Candidates: interested (weight 10) and ifit (weight 3)
+  let candidates = events.filter(e =>
+    ratings[e.id] === 'interested' || ratings[e.id] === 'ifit'
+  );
+  // Remove candidates overlapping with locked
+  candidates = candidates.filter(c => !locked.some(l => eventsOverlap(c, l)));
+
+  // Assign weights
+  const weighted = candidates.map(e => ({
+    ...e,
+    weight: ratings[e.id] === 'interested' ? 10 : 3
+  }));
+
+  // Sort by end time
+  weighted.sort((a, b) => a.endTime - b.endTime);
+
+  const n = weighted.length;
+  if (n === 0) {
+    schedule = locked.map(e => e.id);
+    saveSchedule();
+    renderOptResults();
+    renderSchedulePanel();
+    showToast(`Schedule: ${schedule.length} events (locked only)`);
+    return;
+  }
+
+  // Precompute p[i]: latest event that doesn't overlap with i
+  const p = new Array(n).fill(-1);
+  for (let i = 0; i < n; i++) {
+    // Binary search for latest j < i where weighted[j].endTime <= weighted[i].startTime
+    let lo = 0, hi = i - 1, best = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (weighted[mid].endTime <= weighted[i].startTime) {
+        best = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    p[i] = best;
+  }
+
+  // DP
+  const dp = new Array(n).fill(0);
+  dp[0] = weighted[0].weight;
+  for (let i = 1; i < n; i++) {
+    const incl = weighted[i].weight + (p[i] >= 0 ? dp[p[i]] : 0);
+    const excl = dp[i - 1];
+    dp[i] = Math.max(incl, excl);
+  }
+
+  // Backtrack
+  const selected = [];
+  let i = n - 1;
+  while (i >= 0) {
+    const incl = weighted[i].weight + (p[i] >= 0 ? dp[p[i]] : 0);
+    if (i === 0) {
+      if (weighted[i].weight >= 0) selected.push(weighted[i].id);
+      break;
+    }
+    if (incl >= dp[i - 1]) {
+      selected.push(weighted[i].id);
+      i = p[i];
+    } else {
+      i--;
+    }
+  }
+
+  schedule = [...locked.map(e => e.id), ...selected];
+  saveSchedule();
+  renderOptResults();
+  renderSchedulePanel();
+  showToast(`Schedule optimized: ${schedule.length} events selected!`);
+}
+
+// ===== RENDER: SCHEDULE PANEL =====
+function renderSchedulePanel() {
+  const noSched = document.getElementById('no-schedule');
+  if (!schedule || schedule.length === 0) {
+    noSched.style.display = '';
+    document.getElementById('sched-timeline').innerHTML = '';
+    document.getElementById('sched-list').innerHTML = '';
+    return;
+  }
+  noSched.style.display = 'none';
+  renderTimeline();
+  renderScheduleList();
+}
+
+function renderTimeline() {
+  const container = document.getElementById('sched-timeline');
+  const sched = schedule.map(id => getEventById(id)).filter(Boolean).sort((a, b) => a.startTime - b.startTime);
+
+  // Find which days have events
+  const days = [...new Set(sched.map(e => e.dayIndex))].sort();
+  if (days.length === 0) { container.innerHTML = ''; return; }
+
+  // Time range: 9 AM to 1 AM next day = 9 to 25 (we'll use hour offsets)
+  const startHour = 9;
+  const endHour = 25; // 1 AM next day
+  const totalSlots = (endHour - startHour) * 2; // 30-min slots
+
+  const cols = days.length + 1; // +1 for time labels
+  let html = `<div class="timeline-wrap"><div class="timeline" style="grid-template-columns: 60px ${days.map(() => '1fr').join(' ')}; grid-template-rows: auto ${Array(totalSlots).fill('20px').join(' ')};">`;
+
+  // Header row
+  html += `<div class="tl-header" style="grid-column:1">Time</div>`;
+  days.forEach((di, ci) => {
+    html += `<div class="tl-header" style="grid-column:${ci + 2}">${DAY_NAMES[di]}</div>`;
+  });
+
+  // Time labels
+  for (let s = 0; s < totalSlots; s++) {
+    const hour = startHour + Math.floor(s / 2);
+    const min = (s % 2) * 30;
+    if (min === 0) {
+      const displayHour = hour > 24 ? hour - 24 : hour;
+      const ampm = displayHour >= 12 && displayHour < 24 ? 'PM' : 'AM';
+      const h12 = displayHour % 12 || 12;
+      html += `<div class="tl-time" style="grid-row:${s + 2}">${h12} ${ampm}</div>`;
+    }
+  }
+
+  // Place events
+  sched.forEach(e => {
+    const colIdx = days.indexOf(e.dayIndex);
+    if (colIdx < 0) return;
+    const col = colIdx + 2;
+
+    let eStartHour = e.startTime.getHours() + e.startTime.getMinutes() / 60;
+    // Handle midnight crossing: if the event is on a different calendar day than its dayIndex
+    if (e.startTime.getDate() !== 20 + e.dayIndex && e.startTime.getHours() < startHour) {
+      eStartHour += 24;
+    }
+
+    let eEndHour = e.endTime.getHours() + e.endTime.getMinutes() / 60;
+    if (e.endTime.getDate() > e.startTime.getDate() || (e.endTime.getHours() < e.startTime.getHours() && e.duration > 0)) {
+      eEndHour += 24;
+    }
+    // If the end hour is small (like 0 or 1 AM) and start is in PM range
+    if (eEndHour < eStartHour) eEndHour += 24;
+
+    const rowStart = Math.round((eStartHour - startHour) * 2) + 2;
+    const rowEnd = Math.round((eEndHour - startHour) * 2) + 2;
+    if (rowStart < 2 || rowEnd <= rowStart) return;
+
+    const r = ratings[e.id] || 'interested';
+    const cls = classifySessionType(e.sessionType);
+    const typeLabel = cls === 'heat' || cls === 'semi' || cls === 'final' ? ` <span class="tl-type ${getSessionBadgeClass(e.sessionType)}">${esc(e.sessionType)}</span>` : '';
+    html += `<div class="tl-event tl-${r}" style="grid-column:${col};grid-row:${rowStart}/${rowEnd}" title="${esc(e.subject)}\n${formatTimeRange(e)}">${esc(e.gameName)}${typeLabel}</div>`;
+  });
+
+  html += '</div></div>';
+  container.innerHTML = html;
+}
+
+function renderScheduleList() {
+  const container = document.getElementById('sched-list');
+  const sched = schedule.map(id => getEventById(id)).filter(Boolean).sort((a, b) => a.startTime - b.startTime);
+  const byDay = {};
+  sched.forEach(e => {
+    if (!byDay[e.dayIndex]) byDay[e.dayIndex] = [];
+    byDay[e.dayIndex].push(e);
+  });
+
+  let html = '<div class="sched-list">';
+  for (const di of Object.keys(byDay).map(Number).sort()) {
+    html += `<div class="sl-day">${DAY_LABELS[di]}</div>`;
+    const dayEvts = byDay[di];
+    for (let i = 0; i < dayEvts.length; i++) {
+      const e = dayEvts[i];
+      if (i > 0) {
+        const gap = (e.startTime - dayEvts[i - 1].endTime) / (1000 * 60);
+        if (gap > 0) {
+          html += `<div class="sl-gap">Free: ${formatDuration(gap)}</div>`;
+        }
+      }
+      html += `<div class="sl-item">
+        <span class="sl-time">${formatTimeRange(e)}</span>
+        <span class="sl-name">${esc(e.gameName)}</span>
+        <span class="session-badge ${getSessionBadgeClass(e.sessionType)}" style="font-size:0.7rem">${esc(e.sessionType)}</span>
+      </div>`;
+    }
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ===== VIEW SWITCHING =====
+function switchView(view, btn) {
+  document.querySelectorAll('.sched-controls button[data-view]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('sched-timeline').style.display = view === 'timeline' ? '' : 'none';
+  document.getElementById('sched-list').style.display = view === 'list' ? '' : 'none';
+}
+
+// ===== EXPORT =====
+function exportText() {
+  if (!schedule || schedule.length === 0) { showToast('No schedule to export'); return; }
+  const sched = schedule.map(id => getEventById(id)).filter(Boolean).sort((a, b) => a.startTime - b.startTime);
+  const byDay = {};
+  sched.forEach(e => {
+    if (!byDay[e.dayIndex]) byDay[e.dayIndex] = [];
+    byDay[e.dayIndex].push(e);
+  });
+  let text = 'ROOKS CON 2026 - MY SCHEDULE\n============================\n\n';
+  for (const di of Object.keys(byDay).map(Number).sort()) {
+    text += `${DAY_LABELS[di]}\n${'-'.repeat(DAY_LABELS[di].length)}\n`;
+    byDay[di].forEach(e => {
+      text += `  ${formatTimeRange(e).padEnd(22)} ${e.gameName} (${e.sessionType})\n`;
+    });
+    text += '\n';
+  }
+  navigator.clipboard.writeText(text).then(() => showToast('Schedule copied to clipboard!'));
+}
+
+function exportCSV() {
+  if (!schedule || schedule.length === 0) { showToast('No schedule to export'); return; }
+  const sched = schedule.map(id => getEventById(id)).filter(Boolean).sort((a, b) => a.startTime - b.startTime);
+  let csv = 'Subject,Start Date,Start Time,End Date,End Time,All Day Event,Description,Location,Private\n';
+  sched.forEach(e => {
+    csv += `"${e.subject}",${e.startDate},${e.startTimeStr},${e.endDate},${e.endTimeStr},False,"Session: ${e.sessionType}",Rooks Con 2026,True\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'RooksCon2026_MySchedule.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV downloaded!');
+}
+
+// ===== TABS =====
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+    if (tab.dataset.tab === 'ratings') renderRatingsPanel();
+    if (tab.dataset.tab === 'optimize') renderOptimizePanel();
+    if (tab.dataset.tab === 'schedule') renderSchedulePanel();
+  });
+});
+
+// ===== FILTER LISTENERS =====
+document.getElementById('search-box').addEventListener('input', renderEventList);
+document.getElementById('filter-game').addEventListener('change', renderEventList);
+document.getElementById('filter-day').addEventListener('change', renderEventList);
+document.getElementById('filter-type').addEventListener('change', renderEventList);
+document.getElementById('filter-rating').addEventListener('change', renderEventList);
+
+// ===== INIT =====
+function init() {
+  events = parseCSV(CSV_RAW);
+  chains = detectChains(events);
+  loadRatings();
+  loadAutoHeats();
+  loadSchedule();
+  populateFilters();
+  renderBulkBar();
+  renderEventList();
+}
+init();
+</script>
+</body>
+</html>
