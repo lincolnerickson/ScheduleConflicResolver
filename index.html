@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rooks Con 2026 Schedule Conflict Resolver</title>
+<title>Rooks Con 2026 Schedule Generator</title>
 <style>
 :root {
   --bg: #f5f5f5; --surface: #ffffff; --text: #1a1a1a; --text-muted: #666;
@@ -40,6 +40,12 @@ header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
 .toolbar input[type="text"] { flex: 1; min-width: 180px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; }
 .toolbar select { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.85rem; background: white; }
 .toolbar .progress { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+.clear-btn { padding: 8px 12px; border: 1px solid #dc2626; border-radius: var(--radius); font-size: 0.85rem; font-weight: 600; background: white; color: #dc2626; cursor: pointer; transition: var(--transition); white-space: nowrap; }
+.clear-btn:hover { background: #dc2626; color: white; }
+.ifit-btn { padding: 8px 12px; border: 1px solid var(--ifit); border-radius: var(--radius); font-size: 0.85rem; font-weight: 600; background: white; color: var(--ifit); cursor: pointer; transition: var(--transition); white-space: nowrap; }
+.ifit-btn:hover { background: var(--ifit); color: white; }
+.advanced-toggle { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.advanced-toggle input { cursor: pointer; }
 
 /* Bulk actions */
 .bulk-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
@@ -89,6 +95,20 @@ header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
 .stat-card .label { font-size: 0.8rem; color: var(--text-muted); }
 .stat-must .num { color: var(--must); } .stat-interested .num { color: var(--interested); }
 .stat-ifit .num { color: var(--ifit); }
+.opt-options { display: flex; flex-direction: column; gap: 12px; }
+.opt-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.opt-option label { font-size: 0.9rem; font-weight: 600; }
+.opt-option select { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.85rem; background: white; }
+.blocked-time-add { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.blocked-time-add select { padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.82rem; background: white; }
+.blocked-time-add span { font-size: 0.85rem; color: var(--text-muted); }
+.bt-add-btn { padding: 5px 12px; border: 1px solid var(--interested); border-radius: var(--radius); font-size: 0.82rem; font-weight: 600; background: white; color: var(--interested); cursor: pointer; transition: var(--transition); }
+.bt-add-btn:hover { background: var(--interested); color: white; }
+.bt-item { display: inline-flex; align-items: center; gap: 6px; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 14px; padding: 3px 10px; font-size: 0.8rem; font-weight: 600; color: #991b1b; margin: 3px 3px 3px 0; }
+.bt-item button { background: none; border: none; color: #991b1b; cursor: pointer; font-size: 0.9rem; padding: 0 2px; font-weight: 700; }
+.bt-item button:hover { color: #dc2626; }
+.opt-day-checks { display: flex; gap: 10px; flex-wrap: wrap; }
+.opt-day-checks label { font-size: 0.85rem; font-weight: 400; display: flex; align-items: center; gap: 3px; cursor: pointer; }
 .opt-btn { display: block; width: 100%; padding: 14px; font-size: 1.1rem; font-weight: 700; background: linear-gradient(135deg, var(--interested), #1d4ed8); color: white; border: none; border-radius: var(--radius); cursor: pointer; transition: var(--transition); }
 .opt-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
 .opt-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -114,17 +134,25 @@ header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
 .timeline { display: grid; gap: 2px; min-width: 600px; position: relative; }
 .timeline .tl-header { font-weight: 700; font-size: 0.8rem; text-align: center; padding: 6px 4px; background: #e0e7ff; border-radius: 4px; position: sticky; top: 0; }
 .timeline .tl-time { font-size: 0.72rem; color: var(--text-muted); text-align: right; padding-right: 6px; grid-column: 1; display: flex; align-items: start; justify-content: flex-end; }
-.tl-event { border-radius: 4px; padding: 3px 5px; font-size: 0.7rem; font-weight: 600; overflow: hidden; cursor: default; line-height: 1.2; border: 1px solid rgba(0,0,0,0.1); }
+.tl-day-col { position: relative; }
+.tl-event { border-radius: 4px; padding: 3px 5px; font-size: 0.7rem; font-weight: 600; overflow: hidden; cursor: default; line-height: 1.2; border: 1px solid rgba(0,0,0,0.1); position: absolute; left: 0; right: 0; box-sizing: border-box; }
 .tl-type { display: inline-block; color: white; font-size: 0.55rem; padding: 0 3px; border-radius: 3px; vertical-align: middle; margin-left: 2px; }
-.tl-event.tl-must { background: var(--must-bg); border-color: var(--must); color: #15803d; }
-.tl-event.tl-interested { background: var(--interested-bg); border-color: var(--interested); color: #1d4ed8; }
-.tl-event.tl-ifit { background: var(--ifit-bg); border-color: var(--ifit); color: #b45309; }
+.tl-event.tl-heat { background: var(--interested-bg); border-color: var(--interested); color: #1d4ed8; }
+.tl-event.tl-semi { background: var(--interested-bg); border-color: var(--semi); color: #0d9488; }
+.tl-event.tl-final { background: var(--must-bg); border-color: var(--must); color: #15803d; }
+.tl-event.tl-other { background: var(--ifit-bg); border-color: var(--ifit); color: #b45309; }
+.tl-chain .tl-game { background: #fde047; color: #1a1a1a; padding: 0 3px; border-radius: 3px; }
+.chain-badge { display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 8px; margin-left: 6px; vertical-align: middle; white-space: nowrap; }
 
 /* List view */
 .sched-list { background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: 0 1px 3px var(--shadow); }
 .sl-day { padding: 8px 16px; background: #e0e7ff; font-weight: 700; font-size: 0.9rem; }
-.sl-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.sl-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border); border-left: 4px solid transparent; }
 .sl-item:last-child { border-bottom: none; }
+.sl-item.sl-heat { border-left-color: var(--interested); background: var(--interested-bg); }
+.sl-item.sl-semi { border-left-color: var(--semi); background: #f0fdfa; }
+.sl-item.sl-final { border-left-color: var(--must); background: var(--must-bg); }
+.sl-item.sl-other { border-left-color: var(--ifit); background: var(--ifit-bg); }
 .sl-time { font-size: 0.85rem; color: var(--text-muted); min-width: 120px; white-space: nowrap; }
 .sl-name { font-weight: 600; font-size: 0.9rem; flex: 1; }
 .sl-gap { background: #f0fdf4; color: var(--must); font-style: italic; padding: 6px 16px; font-size: 0.82rem; border-bottom: 1px solid var(--border); }
@@ -150,36 +178,90 @@ header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
 .rg-item .rating-btns { display: flex; gap: 3px; }
 .rg-item .rating-btn { padding: 3px 8px; font-size: 0.72rem; }
 
+/* Conflicts panel */
+.conflict-group { background: var(--surface); border-radius: var(--radius); box-shadow: 0 1px 3px var(--shadow); margin-bottom: 12px; overflow: hidden; border-left: 4px solid #dc2626; }
+.cg-header { padding: 10px 16px; background: #fef2f2; font-weight: 700; font-size: 0.9rem; color: #991b1b; display: flex; justify-content: space-between; align-items: center; }
+.cg-header .cg-day { font-size: 0.8rem; font-weight: 400; color: var(--text-muted); }
+.cg-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.cg-item:last-child { border-bottom: none; }
+.cg-item .cg-name { font-weight: 600; font-size: 0.88rem; flex: 1; min-width: 120px; }
+.cg-item .cg-time { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; min-width: 110px; }
+.cg-item .cg-rating-label { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+.cg-item .rating-btns { display: flex; gap: 3px; }
+.cg-item .rating-btn { padding: 3px 8px; font-size: 0.72rem; }
+.conflicts-summary { background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px var(--shadow); text-align: center; }
+.conflicts-summary .num { font-size: 1.8rem; font-weight: 700; color: #dc2626; }
+.conflicts-summary .label { font-size: 0.85rem; color: var(--text-muted); }
+
+/* Welcome modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal { background: var(--surface); border-radius: 12px; max-width: 560px; width: 100%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.modal-header { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: white; padding: 20px 24px; border-radius: 12px 12px 0 0; }
+.modal-header h2 { font-size: 1.3rem; margin-bottom: 4px; }
+.modal-header p { opacity: 0.85; font-size: 0.85rem; }
+.modal-body { padding: 20px 24px; }
+.modal-body h3 { font-size: 1rem; margin: 16px 0 8px; color: var(--interested); }
+.modal-body h3:first-child { margin-top: 0; }
+.modal-body p, .modal-body li { font-size: 0.9rem; line-height: 1.6; color: var(--text); }
+.modal-body ul { padding-left: 20px; margin-bottom: 8px; }
+.modal-body li { margin-bottom: 4px; }
+.modal-body .step-num { display: inline-block; width: 24px; height: 24px; background: var(--interested); color: white; border-radius: 50%; text-align: center; font-size: 0.8rem; font-weight: 700; line-height: 24px; margin-right: 6px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.modal-footer label { font-size: 0.82rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.modal-close { padding: 10px 24px; background: linear-gradient(135deg, var(--interested), #1d4ed8); color: white; border: none; border-radius: var(--radius); font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: var(--transition); }
+.modal-close:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+
 /* Toast */
 .toast { position: fixed; bottom: 20px; right: 20px; background: #1e3a5f; color: white; padding: 12px 20px; border-radius: var(--radius); font-size: 0.9rem; z-index: 1000; transform: translateY(100px); opacity: 0; transition: all 0.3s ease; }
 .toast.show { transform: translateY(0); opacity: 1; }
+/* Print styles for PDF export */
+@media print {
+  body { background: white; }
+  .tabs, .sched-controls, .toast, .toolbar, .bulk-bar { display: none !important; }
+  header { background: #1e3a5f !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .panel { display: none !important; }
+  #panel-schedule { display: block !important; padding: 0; }
+  #sched-timeline { display: none !important; }
+  #sched-list { display: block !important; }
+  .no-schedule { display: none !important; }
+  .sched-list { box-shadow: none; }
+  .sl-day { background: #e0e7ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sl-item { border-left-width: 4px !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sl-item.sl-heat { background: var(--interested-bg) !important; border-left-color: var(--interested) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sl-item.sl-final { background: var(--must-bg) !important; border-left-color: var(--must) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sl-item.sl-semi { background: #f0fdfa !important; border-left-color: var(--semi) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sl-item.sl-other { background: var(--ifit-bg) !important; border-left-color: var(--ifit) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .session-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sl-gap { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 </style>
 </head>
 <body>
 
 <header>
   <div class="inner">
-    <h1>Rooks Con 2026 — Schedule Conflict Resolver</h1>
-    <p>May 20-25 &bull; Rate events, optimize your schedule, export the result</p>
+    <h1>Rooks Con 2026 — Schedule Generator</h1>
+    <p>May 20-25 &bull;Rank Events, Optimize Your Schedule, Export the Result</p>
   </div>
 </header>
 
 <div class="tabs">
-  <button class="tab active" data-tab="browse">Browse &amp; Rate <span class="badge" id="progress-badge">0/239</span></button>
+  <button class="tab active" data-tab="browse">Browse &amp; Rank <span class="badge" id="progress-badge">0/239</span></button>
+  <button class="tab" data-tab="conflicts">Conflicts <span class="badge" id="conflicts-badge">0</span></button>
   <button class="tab" data-tab="optimize">Optimize</button>
   <button class="tab" data-tab="ratings">My Ratings <span class="badge" id="ratings-badge">0</span></button>
   <button class="tab" data-tab="schedule">My Schedule</button>
 </div>
 
 <div class="app">
-  <!-- Browse & Rate -->
+  <!-- Browse & Rank -->
   <div class="panel active" id="panel-browse">
     <div class="toolbar">
       <input type="text" id="search-box" placeholder="Search events...">
-      <select id="filter-game"><option value="">All Games</option></select>
-      <select id="filter-day"><option value="">All Days</option></select>
-      <select id="filter-type"><option value="">All Types</option></select>
-      <select id="filter-rating">
+      <select id="filter-game" class="advanced-filter" style="display:none"><option value="">All Games</option></select>
+      <select id="filter-day" class="advanced-filter" style="display:none"><option value="">All Days</option></select>
+      <select id="filter-type" class="advanced-filter" style="display:none"><option value="">All Types</option></select>
+      <select id="filter-rating" class="advanced-filter" style="display:none">
         <option value="">All Ratings</option>
         <option value="must">Must Attend</option>
         <option value="interested">Interested</option>
@@ -188,6 +270,9 @@ header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
         <option value="unrated">Unrated</option>
       </select>
       <span class="progress" id="progress-text">0 / 239 rated</span>
+      <button class="ifit-btn" onclick="markAllUnratedIfItFits()">Mark Rest "If It Fits"</button>
+      <label class="advanced-toggle"><input type="checkbox" id="advanced-mode" onchange="toggleAdvancedMode()"> Advanced Mode</label>
+      <button class="clear-btn advanced-filter" style="display:none" onclick="clearAllRatings()">Clear All Ratings</button>
     </div>
     <div class="bulk-bar" id="bulk-bar"></div>
     <div id="events-container"></div>
@@ -198,7 +283,16 @@ header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
     <div id="ratings-container"></div>
     <div class="no-schedule" id="no-ratings">
       <h3>No ratings yet</h3>
-      <p>Rate events in the Browse & Rate tab to see them here.</p>
+      <p>Rate events in the Browse & Rank tab to see them here.</p>
+    </div>
+  </div>
+
+  <!-- Conflicts -->
+  <div class="panel" id="panel-conflicts">
+    <div id="conflicts-container"></div>
+    <div class="no-schedule" id="no-conflicts">
+      <h3>No conflicts</h3>
+      <p>No rated events overlap with each other. You're all clear!</p>
     </div>
   </div>
 
@@ -209,6 +303,61 @@ header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
       <div class="opt-stats" id="opt-stats"></div>
       <div id="opt-errors"></div>
       <div id="opt-warnings"></div>
+    </div>
+    <div class="opt-section">
+      <h3>Schedule Options</h3>
+      <div class="opt-options">
+        <div class="opt-option">
+          <label for="opt-max-per-day">Max events per day</label>
+          <select id="opt-max-per-day">
+            <option value="0">No limit</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5" selected>5</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="10">10</option>
+          </select>
+        </div>
+        <div class="opt-option" style="flex-direction:column;align-items:stretch;">
+          <label>Blocked times (can't attend)</label>
+          <div id="blocked-times-list"></div>
+          <div class="blocked-time-add">
+            <select id="bt-day">
+              <option value="0">Wed</option>
+              <option value="1">Thu</option>
+              <option value="2">Fri</option>
+              <option value="3">Sat</option>
+              <option value="4">Sun</option>
+              <option value="5">Mon</option>
+            </select>
+            <select id="bt-start"></select>
+            <span>to</span>
+            <select id="bt-end"></select>
+            <button class="bt-add-btn" onclick="addBlockedTime()">Add</button>
+          </div>
+        </div>
+        <div class="opt-option">
+          <label>Fill empty slots</label>
+          <label style="font-weight:400;font-size:0.85rem;display:flex;align-items:center;gap:4px;cursor:pointer;">
+            <input type="checkbox" id="opt-fill-schedule"> Fill all remaining time slots with games (ignores incomplete tournament chains)
+          </label>
+        </div>
+        <div class="opt-option">
+          <label>Exclude days</label>
+          <div class="opt-day-checks" id="opt-exclude-days">
+            <label><input type="checkbox" value="0"> Wed</label>
+            <label><input type="checkbox" value="1"> Thu</label>
+            <label><input type="checkbox" value="2"> Fri</label>
+            <label><input type="checkbox" value="3"> Sat</label>
+            <label><input type="checkbox" value="4"> Sun</label>
+            <label><input type="checkbox" value="5"> Mon</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="opt-section">
       <button class="opt-btn" id="opt-btn" onclick="runOptimize()">Generate Optimal Schedule</button>
     </div>
     <div id="opt-results"></div>
@@ -219,8 +368,10 @@ header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
     <div class="sched-controls">
       <button class="active" data-view="timeline" onclick="switchView('timeline',this)">Timeline</button>
       <button data-view="list" onclick="switchView('list',this)">List</button>
+      <button id="hide-demos-btn" onclick="toggleHideDemos()">Hide Demos</button>
       <button class="export-btn" onclick="exportText()">Copy as Text</button>
       <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+      <button class="export-btn" onclick="exportPDF()">Save as PDF</button>
     </div>
     <div id="sched-timeline"></div>
     <div id="sched-list" style="display:none"></div>
@@ -233,10 +384,42 @@ header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
 
 <div class="toast" id="toast"></div>
 
+<div class="modal-overlay" id="welcome-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Welcome to the Schedule Generator!</h2>
+      <p>Rooks Con 2026 &bull; May 20-25</p>
+    </div>
+    <div class="modal-body">
+      <h3><span class="step-num">1</span>Rank Your Games</h3>
+      <p>Give the games a rating:</p>
+      <ul>
+        <li><strong>Must Attend</strong> — locked into your schedule (will not be removed)</li>
+        <li><strong>Interested</strong> — high priority, optimizer will try to include it</li>
+        <li><strong>If It Fits</strong> — lower priority, included if there's no conflict</li>
+        <li><strong>Skip</strong> — hides the event (you won't attend)</li>
+      </ul>
+      <p>Enable <strong>Advanced Mode</strong> to see heats, semis, and other event types.</p>
+
+      <h3><span class="step-num">2</span> Check Conflicts</h3>
+      <p>Switch to the <strong>Conflicts</strong> tab to see which of your rated events overlap. Adjust ratings to resolve them, or let the optimizer handle it.</p>
+
+      <h3><span class="step-num">3</span> Optimize</h3>
+      <p>Go to the <strong>Optimize</strong> tab and click <strong>Generate Optimal Schedule</strong>. The optimizer will pick the best non-overlapping set of events based on your ratings. Heats and demos are added automatically for games in your schedule.</p>
+
+      <h3><span class="step-num">4</span> View &amp; Export</h3>
+      <p>Check your schedule in the <strong>My Schedule</strong> tab with timeline or list view. Export as text, CSV, or PDF to take it with you!</p>
+    </div>
+    <div class="modal-footer">
+      <label><input type="checkbox" id="dont-show-again"> Don't show this again</label>
+      <button class="modal-close" onclick="closeWelcome()">Get Started</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ===== EMBEDDED CSV =====
 const CSV_RAW = `Subject,Start Date,Start Time,End Date,End Time,All Day Event,Description,Location,Private
-Open Gaming/Badge Pick Up Opens,05/20/2026,9:00 AM,05/20/2026,11:00 PM,False,Session: N/A,Rooks Con 2026,True
 Blood on the Clocktower - DEMO,05/20/2026,9:00 AM,05/20/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
 Dominion - DEMO,05/20/2026,9:00 AM,05/20/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
 Splendor - DEMO,05/20/2026,9:00 AM,05/20/2026,10:00 AM,False,Session: DEMO,Rooks Con 2026,True
@@ -488,7 +671,9 @@ let events = [];
 let chains = {};
 let ratings = {};       // id -> 'must' | 'interested' | 'ifit' | 'skip'
 let autoHeats = {};     // id -> true, tracks auto-selected heat ratings
+let autoSemis = {};     // id -> true, tracks auto-selected semi ratings
 let schedule = null;    // array of event ids after optimization
+let hideDemos = false;  // toggle for hiding demos in schedule view
 const DAY_NAMES = ['Wed May 20', 'Thu May 21', 'Fri May 22', 'Sat May 23', 'Sun May 24', 'Mon May 25'];
 const DAY_LABELS = ['Wednesday, May 20', 'Thursday, May 21', 'Friday, May 22', 'Saturday, May 23', 'Sunday, May 24', 'Monday, May 25'];
 
@@ -612,9 +797,10 @@ function detectChains(events) {
 function classifySessionType(st) {
   const u = st.toUpperCase();
   if (u.includes('HEAT')) return 'heat';
-  if (u.includes('SEMI') && u.includes('FINAL')) return 'final'; // SEMI/FINAL counts as final
+  if (u.includes('SEMI') && u.includes('FINAL')) return 'final';
   if (u.includes('SEMI')) return 'semi';
   if (u.includes('FINAL')) return 'final';
+  if (u.includes('CONTINUOUS')) return 'final';
   return 'other';
 }
 
@@ -634,6 +820,7 @@ function getSessionBadgeClass(st) {
 const STORAGE_KEY = 'rookscon2026_ratings';
 const SCHEDULE_KEY = 'rookscon2026_schedule';
 const AUTOHEATS_KEY = 'rookscon2026_autoheats';
+const AUTOSEMIS_KEY = 'rookscon2026_autosemis';
 
 function saveRatings() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ratings)); } catch (e) {}
@@ -651,6 +838,15 @@ function loadAutoHeats() {
   try {
     const d = localStorage.getItem(AUTOHEATS_KEY);
     if (d) autoHeats = JSON.parse(d);
+  } catch (e) {}
+}
+function saveAutoSemis() {
+  try { localStorage.setItem(AUTOSEMIS_KEY, JSON.stringify(autoSemis)); } catch (e) {}
+}
+function loadAutoSemis() {
+  try {
+    const d = localStorage.getItem(AUTOSEMIS_KEY);
+    if (d) autoSemis = JSON.parse(d);
   } catch (e) {}
 }
 function saveSchedule() {
@@ -697,17 +893,35 @@ function showToast(msg) {
 }
 
 // ===== CONFLICT DETECTION =====
+// Check if an event has an alternative session of the same tournament stage
+// that doesn't conflict with the given other event
+function hasAlternativeSession(event, conflictWith) {
+  const ct = classifySessionType(event.sessionType);
+  if (ct !== 'heat' && ct !== 'semi' && ct !== 'final') return false;
+  const chain = chains[event.gameName];
+  if (!chain) return false;
+  const stageIds = ct === 'heat' ? chain.heats : ct === 'semi' ? chain.semis : chain.finals;
+  if (stageIds.length <= 1) return false;
+  return stageIds.some(id => {
+    if (id === event.id) return false;
+    const alt = getEventById(id);
+    return alt && !eventsOverlap(conflictWith, alt);
+  });
+}
+
 function findConflicts(eventId) {
   const ev = getEventById(eventId);
   if (!ev) return [];
   return events.filter(e =>
     e.id !== eventId &&
     ratings[e.id] && ratings[e.id] !== 'skip' &&
-    eventsOverlap(ev, e)
+    eventsOverlap(ev, e) &&
+    !hasAlternativeSession(e, ev) &&
+    !hasAlternativeSession(ev, e)
   );
 }
 
-// ===== RENDER: BROWSE & RATE =====
+// ===== RENDER: BROWSE & RANK =====
 function renderEventList() {
   const container = document.getElementById('events-container');
   const search = document.getElementById('search-box').value.toLowerCase();
@@ -719,21 +933,21 @@ function renderEventList() {
   // Group by day
   const grouped = {};
   events.forEach(e => {
+    // Hide DEMO events from Browse & Rank (auto-added to schedule)
+    if (e.sessionType.toUpperCase() === 'DEMO') return;
+    // Hide skipped events unless explicitly filtered to show them
+    if (ratings[e.id] === 'skip' && ratingFilter !== 'skip') return;
     // Filter
     if (search && !e.subject.toLowerCase().includes(search) && !e.gameName.toLowerCase().includes(search)) return;
     if (gameFilter && e.gameName !== gameFilter) return;
     if (dayFilter && e.dayIndex !== parseInt(dayFilter)) return;
     if (typeFilter) {
       const cls = classifySessionType(e.sessionType);
-      const u = e.sessionType.toUpperCase();
-      if (typeFilter === 'demo' && u !== 'DEMO') return;
+      const isAdvanced = document.getElementById('advanced-mode').checked;
       if (typeFilter === 'heat' && cls !== 'heat') return;
       if (typeFilter === 'semi' && cls !== 'semi') return;
-      if (typeFilter === 'final' && cls !== 'final') return;
-      if (typeFilter === 'other' && ['DEMO', 'heat', 'semi', 'final'].includes(cls === 'other' ? '' : cls) && u !== 'DEMO') {
-        if (cls !== 'other') return;
-      }
-      if (typeFilter === 'other' && (u === 'DEMO' || cls === 'heat' || cls === 'semi' || cls === 'final')) return;
+      if (typeFilter === 'final' && cls !== 'final' && (isAdvanced || cls !== 'other')) return;
+      if (typeFilter === 'other' && (cls === 'heat' || cls === 'semi' || cls === 'final')) return;
     }
     if (ratingFilter) {
       const r = ratings[e.id];
@@ -758,9 +972,11 @@ function renderEventList() {
       const rClass = r ? `rating-${r}` : '';
       const conflicts = findConflicts(e.id);
       html += `<div class="event-card ${rClass}" data-id="${e.id}">`;
+      const isAdvanced = document.getElementById('advanced-mode').checked;
+      const sessionCls = classifySessionType(e.sessionType);
       html += `<div class="card-top">`;
       html += `<span class="game-name">${esc(e.gameName)}</span>`;
-      html += `<span class="session-badge ${getSessionBadgeClass(e.sessionType)}">${esc(e.sessionType)}</span>`;
+      if (isAdvanced || sessionCls === 'other') html += `<span class="session-badge ${getSessionBadgeClass(e.sessionType)}">${esc(e.sessionType)}</span>`;
       html += `</div>`;
       html += `<div class="time-info">${formatTimeRange(e)} &bull; ${formatDuration(e.duration)}</div>`;
       html += `<div class="rating-btns">`;
@@ -779,11 +995,17 @@ function renderEventList() {
   container.innerHTML = html || '<div class="no-schedule"><h3>No events match filters</h3></div>';
   updateProgress();
   renderRatingsPanel();
+  renderConflictsPanel();
 }
 
 function ratingButton(eventId, rating, label, current) {
   const active = current === rating ? `active-${rating}` : '';
   return `<button class="rating-btn ${active}" onclick="setRating(${eventId},'${rating}')">${label}</button>`;
+}
+
+function gameRatingButton(eventId, rating, label, current) {
+  const active = current === rating ? `active-${rating}` : '';
+  return `<button class="rating-btn ${active}" onclick="setGameRating(${eventId},'${rating}')">${label}</button>`;
 }
 
 function esc(str) {
@@ -800,7 +1022,7 @@ function setRating(id, rating) {
     ratings[id] = rating;
   }
 
-  // Auto-heat logic for tournament chains
+  // Auto-heat and auto-semi logic for tournament chains
   const ev = getEventById(id);
   if (ev) {
     const chain = chains[ev.gameName];
@@ -808,10 +1030,14 @@ function setRating(id, rating) {
       const cls = classifySessionType(ev.sessionType);
       if (cls === 'final' || cls === 'semi') {
         if (wasToggleOff) {
-          // Un-rating a semi/final: remove auto-selected heat for this game
           removeAutoHeat(ev.gameName);
-        } else if (rating === 'must' || rating === 'interested') {
+          removeAutoSemi(ev.gameName);
+        } else if (rating === 'must' || rating === 'interested' || rating === 'ifit') {
           autoSelectHeat(ev.gameName, rating);
+          // Auto-select semi when rating a final as must
+          if (cls === 'final' && rating === 'must') {
+            autoSelectSemi(ev.gameName, rating);
+          }
         }
       }
     }
@@ -819,6 +1045,30 @@ function setRating(id, rating) {
 
   saveRatings();
   renderEventList();
+  renderOptimizePanel();
+}
+
+function setGameRating(id, rating) {
+  const ev = getEventById(id);
+  if (!ev) return;
+  const gameName = ev.gameName;
+  const gameEvents = events.filter(e => e.gameName === gameName && e.sessionType.toUpperCase() !== 'DEMO');
+  const wasToggleOff = gameEvents.every(e => ratings[e.id] === rating);
+  gameEvents.forEach(e => {
+    if (wasToggleOff) {
+      delete ratings[e.id];
+      delete autoHeats[e.id];
+    } else {
+      ratings[e.id] = rating;
+    }
+  });
+  saveRatings();
+  saveAutoHeats();
+  renderEventList();
+  renderOptimizePanel();
+  if (!wasToggleOff) {
+    showToast(`Rated all ${gameName} events as "${rating}"`);
+  }
 }
 
 function autoSelectHeat(gameName, rating) {
@@ -874,9 +1124,61 @@ function removeAutoHeat(gameName) {
   saveAutoHeats();
 }
 
+function autoSelectSemi(gameName, rating) {
+  const chain = chains[gameName];
+  if (!chain || chain.semis.length === 0) return;
+
+  // Skip if user already manually rated any semi for this game
+  const hasManualSemi = chain.semis.some(sid => ratings[sid] && ratings[sid] !== 'skip' && !autoSemis[sid]);
+  if (hasManualSemi) return;
+
+  // Remove any previous auto-semi for this game
+  chain.semis.forEach(sid => {
+    if (autoSemis[sid]) {
+      delete ratings[sid];
+      delete autoSemis[sid];
+    }
+  });
+
+  // Pick semi with fewest conflicts
+  const semiScores = chain.semis.map(sid => {
+    const semiEv = getEventById(sid);
+    let conflicts = 0;
+    events.forEach(e => {
+      if (e.id === sid) return;
+      if (e.gameName === gameName) return;
+      if (!ratings[e.id] || ratings[e.id] === 'skip') return;
+      if (eventsOverlap(semiEv, e)) conflicts++;
+    });
+    return { id: sid, conflicts, startTime: semiEv.startTime };
+  });
+  semiScores.sort((a, b) => a.conflicts - b.conflicts || a.startTime - b.startTime);
+  const best = semiScores[0];
+
+  ratings[best.id] = rating;
+  autoSemis[best.id] = true;
+  saveAutoSemis();
+
+  const conflictNote = best.conflicts > 0 ? ` (${best.conflicts} conflict${best.conflicts > 1 ? 's' : ''})` : '';
+  showToast(`Auto-selected ${gameName} ${getEventById(best.id).sessionType}${conflictNote}`);
+}
+
+function removeAutoSemi(gameName) {
+  const chain = chains[gameName];
+  if (!chain) return;
+  chain.semis.forEach(sid => {
+    if (autoSemis[sid]) {
+      delete ratings[sid];
+      delete autoSemis[sid];
+    }
+  });
+  saveAutoSemis();
+}
+
 function updateProgress() {
-  const rated = Object.keys(ratings).length;
-  const total = events.length;
+  const nonDemo = events.filter(e => e.sessionType.toUpperCase() !== 'DEMO');
+  const rated = nonDemo.filter(e => ratings[e.id]).length;
+  const total = nonDemo.length;
   document.getElementById('progress-text').textContent = `${rated} / ${total} rated`;
   document.getElementById('progress-badge').textContent = `${rated}/${total}`;
 }
@@ -932,6 +1234,75 @@ function renderRatingsPanel() {
 function toggleRatingGroup(header) {
   header.classList.toggle('collapsed');
   header.nextElementSibling.classList.toggle('collapsed');
+}
+
+// ===== RENDER: CONFLICTS PANEL =====
+function renderConflictsPanel() {
+  const container = document.getElementById('conflicts-container');
+  const noConflicts = document.getElementById('no-conflicts');
+  const ratingLabels = { must: 'Must Attend', interested: 'Interested', ifit: 'If It Fits' };
+
+  // Find all rated non-skip events
+  const rated = events.filter(e => ratings[e.id] && ratings[e.id] !== 'skip');
+
+  // Build conflict groups: clusters of mutually overlapping events
+  const visited = new Set();
+  const groups = [];
+  for (const e of rated) {
+    if (visited.has(e.id)) continue;
+    const overlapping = rated.filter(o => o.id !== e.id && eventsOverlap(e, o) && !hasAlternativeSession(e, o) && !hasAlternativeSession(o, e));
+    if (overlapping.length === 0) continue;
+    // Collect the full cluster via BFS
+    const cluster = new Set([e.id]);
+    const queue = [e];
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      for (const o of rated) {
+        if (!cluster.has(o.id) && eventsOverlap(cur, o) && !hasAlternativeSession(cur, o) && !hasAlternativeSession(o, cur)) {
+          cluster.add(o.id);
+          queue.push(o);
+        }
+      }
+    }
+    cluster.forEach(id => visited.add(id));
+    const clusterEvents = [...cluster].map(id => getEventById(id)).sort((a, b) => a.startTime - b.startTime);
+    groups.push(clusterEvents);
+  }
+
+  // Sort groups by earliest start time
+  groups.sort((a, b) => a[0].startTime - b[0].startTime);
+
+  const totalConflicts = groups.length;
+  document.getElementById('conflicts-badge').textContent = totalConflicts;
+
+  if (totalConflicts === 0) {
+    container.innerHTML = '';
+    noConflicts.style.display = '';
+    return;
+  }
+  noConflicts.style.display = 'none';
+
+  let html = `<div class="conflicts-summary"><span class="num">${totalConflicts}</span><div class="label">conflict${totalConflicts !== 1 ? 's' : ''} to resolve</div></div>`;
+  for (let g = 0; g < groups.length; g++) {
+    const group = groups[g];
+    const dayIdx = group[0].dayIndex;
+    html += `<div class="conflict-group">`;
+    html += `<div class="cg-header"><span>Conflict ${g + 1}: ${group.length} overlapping events</span><span class="cg-day">${DAY_NAMES[dayIdx]}</span></div>`;
+    for (const e of group) {
+      const r = ratings[e.id];
+      html += `<div class="cg-item">`;
+      html += `<span class="cg-name">${esc(e.gameName)} <span class="session-badge ${getSessionBadgeClass(e.sessionType)}" style="font-size:0.65rem">${esc(e.sessionType)}</span></span>`;
+      html += `<span class="cg-time">${formatTimeRange(e)}</span>`;
+      html += `<div class="rating-btns">`;
+      html += ratingButton(e.id, 'must', 'Must', r);
+      html += ratingButton(e.id, 'interested', 'Int.', r);
+      html += ratingButton(e.id, 'ifit', 'Fits', r);
+      html += ratingButton(e.id, 'skip', 'Skip', r);
+      html += `</div></div>`;
+    }
+    html += `</div>`;
+  }
+  container.innerHTML = html;
 }
 
 // ===== BULK ACTIONS =====
@@ -1007,10 +1378,10 @@ function populateFilters() {
   });
 
   const typeSelect = document.getElementById('filter-type');
-  ['demo', 'heat', 'semi', 'final', 'other'].forEach(t => {
+  ['heat', 'semi', 'final', 'other'].forEach(t => {
     const opt = document.createElement('option');
     opt.value = t;
-    opt.textContent = t === 'demo' ? 'DEMO' : t === 'heat' ? 'Heat' : t === 'semi' ? 'Semi' : t === 'final' ? 'Final' : 'Other';
+    opt.textContent = t === 'heat' ? 'Heat' : t === 'semi' ? 'Semi' : t === 'final' ? 'Final' : 'Other';
     typeSelect.appendChild(opt);
   });
   typeSelect.value = 'final';
@@ -1045,9 +1416,24 @@ function renderOptimizePanel() {
     }
   }
   if (lockedConflicts.length > 0) {
-    errDiv.innerHTML = `<div class="opt-error"><strong>Conflicting Must Attend events!</strong> Resolve these before optimizing:<ul>${
-      lockedConflicts.map(([a, b]) => `<li>${esc(a.gameName)} vs ${esc(b.gameName)} (${DAY_NAMES[a.dayIndex]})</li>`).join('')
-    }</ul></div>`;
+    // Collect unique conflicting events
+    const conflictIds = new Set();
+    lockedConflicts.forEach(([a, b]) => { conflictIds.add(a.id); conflictIds.add(b.id); });
+    const conflictEvents = [...conflictIds].map(id => getEventById(id)).sort((a, b) => a.startTime - b.startTime);
+    let errHtml = `<div class="opt-error"><strong>Conflicting Must Attend events!</strong> Change ratings to resolve:</div>`;
+    conflictEvents.forEach(e => {
+      const r = ratings[e.id] || '';
+      errHtml += `<div class="cg-item" style="background:#fef2f2;margin-bottom:2px;border-radius:var(--radius);">`;
+      errHtml += `<span class="cg-name">${esc(e.gameName)} <span class="session-badge ${getSessionBadgeClass(e.sessionType)}" style="font-size:0.65rem">${esc(e.sessionType)}</span></span>`;
+      errHtml += `<span class="cg-time">${DAY_NAMES[e.dayIndex]} ${formatTimeRange(e)}</span>`;
+      errHtml += `<div class="rating-btns">`;
+      errHtml += gameRatingButton(e.id, 'must', 'Must', r);
+      errHtml += gameRatingButton(e.id, 'interested', 'Int.', r);
+      errHtml += gameRatingButton(e.id, 'ifit', 'Fits', r);
+      errHtml += gameRatingButton(e.id, 'skip', 'Skip', r);
+      errHtml += `</div></div>`;
+    });
+    errDiv.innerHTML = errHtml;
     document.getElementById('opt-btn').disabled = true;
   } else {
     errDiv.innerHTML = '';
@@ -1105,9 +1491,97 @@ function renderOptResults() {
   div.innerHTML = html;
 }
 
+// ===== BLOCKED TIMES =====
+let blockedTimes = []; // { day, startHour, endHour, label }
+
+function populateTimeSelects() {
+  const startSel = document.getElementById('bt-start');
+  const endSel = document.getElementById('bt-end');
+  for (let h = 9; h <= 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      if (h === 24 && m > 0) continue;
+      const val = h + m / 60;
+      const dh = h > 24 ? h - 24 : h;
+      const ampm = dh >= 12 && dh < 24 ? 'PM' : 'AM';
+      const h12 = dh % 12 || 12;
+      const label = m === 0 ? `${h12} ${ampm}` : `${h12}:${m.toString().padStart(2,'0')} ${ampm}`;
+      startSel.innerHTML += `<option value="${val}">${label}</option>`;
+      endSel.innerHTML += `<option value="${val}">${label}</option>`;
+    }
+  }
+  // Add 1 AM for end
+  endSel.innerHTML += `<option value="25">1 AM</option>`;
+  startSel.value = '12';
+  endSel.value = '13';
+}
+
+function addBlockedTime() {
+  const day = parseInt(document.getElementById('bt-day').value);
+  const startHour = parseFloat(document.getElementById('bt-start').value);
+  const endHour = parseFloat(document.getElementById('bt-end').value);
+  if (endHour <= startHour) { showToast('End time must be after start time'); return; }
+  const dayLabel = DAY_NAMES[day];
+  const fmtTime = h => {
+    const dh = h > 24 ? h - 24 : h;
+    const ampm = dh >= 12 && dh < 24 ? 'PM' : 'AM';
+    const h12 = Math.floor(dh) % 12 || 12;
+    const m = Math.round((h % 1) * 60);
+    return m === 0 ? `${h12} ${ampm}` : `${h12}:${m.toString().padStart(2,'0')} ${ampm}`;
+  };
+  const label = `${dayLabel} ${fmtTime(startHour)}-${fmtTime(endHour)}`;
+  blockedTimes.push({ day, startHour, endHour, label });
+  renderBlockedTimes();
+}
+
+function removeBlockedTime(idx) {
+  blockedTimes.splice(idx, 1);
+  renderBlockedTimes();
+}
+
+function renderBlockedTimes() {
+  const container = document.getElementById('blocked-times-list');
+  if (blockedTimes.length === 0) {
+    container.innerHTML = '<span style="font-size:0.82rem;color:var(--text-muted);">None</span>';
+    return;
+  }
+  container.innerHTML = blockedTimes.map((bt, i) =>
+    `<span class="bt-item">${bt.label}<button onclick="removeBlockedTime(${i})">&times;</button></span>`
+  ).join('');
+}
+
+function isBlockedByTime(event) {
+  for (const bt of blockedTimes) {
+    if (event.dayIndex !== bt.day) continue;
+    // Convert event times to hour offsets
+    let eStartH = event.startTime.getHours() + event.startTime.getMinutes() / 60;
+    if (event.startTime.getDate() !== 20 + event.dayIndex && event.startTime.getHours() < 9) {
+      eStartH += 24;
+    }
+    let eEndH = event.endTime.getHours() + event.endTime.getMinutes() / 60;
+    if (event.endTime.getDate() > event.startTime.getDate() || (event.endTime.getHours() < event.startTime.getHours() && event.duration > 0)) {
+      eEndH += 24;
+    }
+    if (eEndH < eStartH) eEndH += 24;
+    // Check overlap
+    if (eStartH < bt.endHour && bt.startHour < eEndH) return true;
+  }
+  return false;
+}
+
 // ===== OPTIMIZATION: WEIGHTED INTERVAL SCHEDULING =====
 function runOptimize() {
-  const locked = events.filter(e => ratings[e.id] === 'must');
+  // Read options
+  const maxPerDay = parseInt(document.getElementById('opt-max-per-day').value) || 0;
+  const excludedDays = new Set(
+    [...document.querySelectorAll('#opt-exclude-days input:checked')].map(cb => parseInt(cb.value))
+  );
+
+  let locked = events.filter(e => ratings[e.id] === 'must');
+  // Remove locked events on excluded days
+  locked = locked.filter(e => !excludedDays.has(e.dayIndex));
+  // Remove locked events during blocked times
+  locked = locked.filter(e => !isBlockedByTime(e));
+
   // Validate locked don't conflict
   for (let i = 0; i < locked.length; i++) {
     for (let j = i + 1; j < locked.length; j++) {
@@ -1122,8 +1596,72 @@ function runOptimize() {
   let candidates = events.filter(e =>
     ratings[e.id] === 'interested' || ratings[e.id] === 'ifit'
   );
+  // Remove candidates on excluded days
+  candidates = candidates.filter(c => !excludedDays.has(c.dayIndex));
+  // Remove candidates during blocked times
+  candidates = candidates.filter(c => !isBlockedByTime(c));
   // Remove candidates overlapping with locked
   candidates = candidates.filter(c => !locked.some(l => eventsOverlap(c, l)));
+
+  // Pre-select tournament chains as complete units before the DP.
+  // This ensures chains aren't broken up by the DP preferring multiple
+  // shorter events over a single chain final.
+  const preSelected = [];
+  const chainEntries = Object.entries(chains)
+    .filter(([game, chain]) => {
+      const allIds = [...chain.heats, ...chain.semis, ...chain.finals];
+      // Only consider chains where at least one event is rated (and not locked)
+      return allIds.some(id => ratings[id] && ratings[id] !== 'skip' && !locked.some(e => e.id === id));
+    })
+    .map(([game, chain]) => {
+      const allIds = [...chain.heats, ...chain.semis, ...chain.finals];
+      const best = allIds.map(id => ratings[id]).filter(r => r && r !== 'skip')
+        .reduce((b, r) => { const o = {must:0,interested:1,ifit:2}; return (o[r]||99) < (o[b]||99) ? r : b; }, 'ifit');
+      return { game, chain, priority: best === 'interested' ? 0 : 1 };
+    })
+    .sort((a, b) => a.priority - b.priority);
+
+  for (const { game, chain } of chainEntries) {
+    // Skip chains where all events are already locked
+    if (chain.finals.some(id => locked.some(e => e.id === id))) continue;
+
+    const allBlocked = [...locked, ...preSelected.map(id => getEventById(id)).filter(Boolean)];
+    const isViable = e => e && !excludedDays.has(e.dayIndex) && !isBlockedByTime(e)
+      && !allBlocked.some(b => eventsOverlap(e, b));
+
+    const viableHeats = chain.heats.map(id => getEventById(id)).filter(isViable);
+    const viableFinals = chain.finals.map(id => getEventById(id)).filter(isViable);
+
+    // Find best heat+final pair that don't conflict with each other
+    let bestPair = null;
+    for (const f of viableFinals) {
+      for (const h of viableHeats) {
+        if (!eventsOverlap(h, f)) { bestPair = { heat: h, final: f }; break; }
+      }
+      if (bestPair) break;
+    }
+    if (!bestPair) continue;
+
+    // Check semi if needed
+    if (chain.semis.length > 0) {
+      const viableSemis = chain.semis.map(id => getEventById(id))
+        .filter(e => isViable(e) && !eventsOverlap(e, bestPair.heat) && !eventsOverlap(e, bestPair.final));
+      if (viableSemis.length > 0) {
+        preSelected.push(bestPair.heat.id, viableSemis[0].id, bestPair.final.id);
+      } else {
+        continue; // Can't complete chain without semi
+      }
+    } else {
+      preSelected.push(bestPair.heat.id, bestPair.final.id);
+    }
+  }
+
+  // Remove pre-selected events from candidates and filter overlaps
+  candidates = candidates.filter(c => !preSelected.includes(c.id));
+  candidates = candidates.filter(c => !preSelected.some(pid => {
+    const pe = getEventById(pid);
+    return pe && eventsOverlap(c, pe);
+  }));
 
   // Assign weights
   const weighted = candidates.map(e => ({
@@ -1136,18 +1674,17 @@ function runOptimize() {
 
   const n = weighted.length;
   if (n === 0) {
-    schedule = locked.map(e => e.id);
+    schedule = [...locked.map(e => e.id), ...preSelected];
     saveSchedule();
     renderOptResults();
     renderSchedulePanel();
-    showToast(`Schedule: ${schedule.length} events (locked only)`);
+    showToast(`Schedule: ${schedule.length} events`);
     return;
   }
 
   // Precompute p[i]: latest event that doesn't overlap with i
   const p = new Array(n).fill(-1);
   for (let i = 0; i < n; i++) {
-    // Binary search for latest j < i where weighted[j].endTime <= weighted[i].startTime
     let lo = 0, hi = i - 1, best = -1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
@@ -1187,11 +1724,203 @@ function runOptimize() {
     }
   }
 
-  schedule = [...locked.map(e => e.id), ...selected];
+  schedule = [...locked.map(e => e.id), ...preSelected, ...selected];
+
+  // Enforce max events per day (keep higher-weighted events)
+  if (maxPerDay > 0) {
+    const dayBuckets = {};
+    schedule.forEach(id => {
+      const e = getEventById(id);
+      if (!e) return;
+      if (!dayBuckets[e.dayIndex]) dayBuckets[e.dayIndex] = [];
+      dayBuckets[e.dayIndex].push(e);
+    });
+    for (const [di, dayEvts] of Object.entries(dayBuckets)) {
+      if (dayEvts.length > maxPerDay) {
+        // Sort: must first, then interested, then ifit; tie-break by start time
+        const priority = { must: 3, interested: 2, ifit: 1 };
+        dayEvts.sort((a, b) => (priority[ratings[b.id]] || 0) - (priority[ratings[a.id]] || 0) || a.startTime - b.startTime);
+        const toRemove = dayEvts.slice(maxPerDay);
+        toRemove.forEach(e => { schedule = schedule.filter(sid => sid !== e.id); });
+      }
+    }
+  }
+
+  // Enforce tournament constraints:
+  // 1. Only keep 1 heat, 1 semi, 1 final per game
+  // 2. If game has separate semis, a semi is required for the final
+  // 3. No heat → remove semi/final; no final → remove semi/heat; no semi (when required) → remove final
+  const removed = [];
+
+  // Step 1: Trim to at most 1 of each stage per game
+  for (const [game, chain] of Object.entries(chains)) {
+    // Keep only earliest scheduled heat
+    const schedHeats = chain.heats.filter(id => schedule.includes(id));
+    if (schedHeats.length > 1) {
+      const sorted = schedHeats.map(id => getEventById(id)).sort((a, b) => a.startTime - b.startTime);
+      sorted.slice(1).forEach(e => { schedule = schedule.filter(sid => sid !== e.id); });
+    }
+    // Keep only earliest scheduled semi
+    const schedSemis = chain.semis.filter(id => schedule.includes(id));
+    if (schedSemis.length > 1) {
+      const sorted = schedSemis.map(id => getEventById(id)).sort((a, b) => a.startTime - b.startTime);
+      sorted.slice(1).forEach(e => { schedule = schedule.filter(sid => sid !== e.id); });
+    }
+    // Keep only earliest scheduled final
+    const schedFinals = chain.finals.filter(id => schedule.includes(id));
+    if (schedFinals.length > 1) {
+      const sorted = schedFinals.map(id => getEventById(id)).sort((a, b) => a.startTime - b.startTime);
+      sorted.slice(1).forEach(e => { schedule = schedule.filter(sid => sid !== e.id); });
+    }
+
+    // Step 2a: If a final (or semi) is scheduled but no heat, try to add a non-conflicting one
+    {
+      const hasFinalOrSemi = chain.finals.some(id => schedule.includes(id)) || chain.semis.some(id => schedule.includes(id));
+      const hasHeat = chain.heats.some(id => schedule.includes(id));
+      if (hasFinalOrSemi && !hasHeat && chain.heats.length > 0) {
+        const heatOptions = chain.heats.map(id => {
+          const e = getEventById(id);
+          const conflicts = schedule.filter(sid => {
+            const se = getEventById(sid);
+            return se && se.id !== id && eventsOverlap(e, se);
+          }).length;
+          return { id, conflicts, startTime: e.startTime };
+        }).sort((a, b) => a.conflicts - b.conflicts || a.startTime - b.startTime);
+        if (heatOptions.length > 0 && heatOptions[0].conflicts === 0) {
+          schedule.push(heatOptions[0].id);
+        }
+      }
+    }
+
+    // Step 2b: If game has separate semis and a final is scheduled but no semi, try to add a non-conflicting one
+    if (chain.semis.length > 0) {
+      const hasFinal = chain.finals.some(id => schedule.includes(id));
+      const hasSemi = chain.semis.some(id => schedule.includes(id));
+      if (hasFinal && !hasSemi) {
+        const semiOptions = chain.semis.map(id => {
+          const e = getEventById(id);
+          const conflicts = schedule.filter(sid => {
+            const se = getEventById(sid);
+            return se && se.id !== id && eventsOverlap(e, se);
+          }).length;
+          return { id, conflicts, startTime: e.startTime };
+        }).sort((a, b) => a.conflicts - b.conflicts || a.startTime - b.startTime);
+        if (semiOptions.length > 0 && semiOptions[0].conflicts === 0) {
+          schedule.push(semiOptions[0].id);
+        }
+      }
+    }
+
+    // Step 2c: If a heat is scheduled but no final, try to add a non-conflicting one
+    {
+      const hasHeat = chain.heats.some(id => schedule.includes(id));
+      const hasFinal = chain.finals.some(id => schedule.includes(id));
+      if (hasHeat && !hasFinal && chain.finals.length > 0) {
+        const finalOptions = chain.finals.map(id => {
+          const e = getEventById(id);
+          const conflicts = schedule.filter(sid => {
+            const se = getEventById(sid);
+            return se && se.id !== id && eventsOverlap(e, se);
+          }).length;
+          return { id, conflicts, startTime: e.startTime };
+        }).sort((a, b) => a.conflicts - b.conflicts || a.startTime - b.startTime);
+        if (finalOptions.length > 0 && finalOptions[0].conflicts === 0) {
+          schedule.push(finalOptions[0].id);
+        }
+      }
+    }
+  }
+
+  // Step 3: Enforce chain dependencies iteratively
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [game, chain] of Object.entries(chains)) {
+      const hasHeat = chain.heats.some(id => schedule.includes(id));
+      const hasSemi = chain.semis.some(id => schedule.includes(id));
+      const hasFinal = chain.finals.some(id => schedule.includes(id));
+
+      // No heat → remove everything
+      if (!hasHeat && (hasSemi || hasFinal)) {
+        [...chain.semis, ...chain.finals].filter(id => schedule.includes(id)).forEach(id => {
+          schedule = schedule.filter(sid => sid !== id);
+          removed.push(`${game} (no heat)`);
+          changed = true;
+        });
+      }
+      // No final → remove heats and semis
+      if (!hasFinal && (hasHeat || hasSemi)) {
+        [...chain.heats, ...chain.semis].filter(id => schedule.includes(id)).forEach(id => {
+          schedule = schedule.filter(sid => sid !== id);
+          removed.push(`${game} (no final)`);
+          changed = true;
+        });
+      }
+      // Game has separate semis: no semi → remove final (which cascades)
+      if (chain.semis.length > 0 && !hasSemi && hasFinal) {
+        chain.finals.filter(id => schedule.includes(id)).forEach(id => {
+          schedule = schedule.filter(sid => sid !== id);
+          removed.push(`${game} (no semi)`);
+          changed = true;
+        });
+      }
+    }
+  }
+
+  // Fill empty time slots with any available games if option is checked
+  const fillSchedule = document.getElementById('opt-fill-schedule').checked;
+  if (fillSchedule) {
+    const remaining = events.filter(e =>
+      !schedule.includes(e.id) &&
+      e.sessionType.toUpperCase() !== 'DEMO' &&
+      ratings[e.id] !== 'skip' &&
+      !excludedDays.has(e.dayIndex) &&
+      !isBlockedByTime(e)
+    );
+    // Sort: interested > ifit > unrated, then by start time
+    const prio = { interested: 2, ifit: 1 };
+    remaining.sort((a, b) =>
+      (prio[ratings[b.id]] || 0) - (prio[ratings[a.id]] || 0) || a.startTime - b.startTime
+    );
+    let fillCount = 0;
+    for (const e of remaining) {
+      const hasConflict = schedule.some(sid => {
+        const se = getEventById(sid);
+        return se && eventsOverlap(e, se);
+      });
+      if (!hasConflict) {
+        schedule.push(e.id);
+        fillCount++;
+      }
+    }
+    if (fillCount > 0) {
+      removed.push(`Filled ${fillCount} empty slot${fillCount !== 1 ? 's' : ''}`);
+    }
+  }
+
+  // Auto-add DEMO events for games in the schedule (even if they conflict)
+  const scheduledGames = new Set(schedule.map(id => getEventById(id)).filter(Boolean).map(e => e.gameName));
+  const demos = events.filter(e => e.sessionType.toUpperCase() === 'DEMO');
+  let demoCount = 0;
+  for (const demo of demos) {
+    if (!scheduledGames.has(demo.gameName)) continue;
+    if (schedule.includes(demo.id)) continue;
+    schedule.push(demo.id);
+    demoCount++;
+  }
+
   saveSchedule();
   renderOptResults();
   renderSchedulePanel();
-  showToast(`Schedule optimized: ${schedule.length} events selected!`);
+  const removedUnique = [...new Set(removed)];
+  let msg = `Schedule optimized: ${schedule.length} events selected!`;
+  if (demoCount > 0) {
+    msg += ` Added ${demoCount} demo${demoCount !== 1 ? 's' : ''}.`;
+  }
+  if (removedUnique.length > 0) {
+    msg += ` Removed: ${removedUnique.join(', ')}.`;
+  }
+  showToast(msg);
 }
 
 // ===== RENDER: SCHEDULE PANEL =====
@@ -1208,21 +1937,78 @@ function renderSchedulePanel() {
   renderScheduleList();
 }
 
+function getCompleteChainGames() {
+  const complete = new Set();
+  for (const [game, chain] of Object.entries(chains)) {
+    const hasHeat = chain.heats.some(id => schedule.includes(id));
+    const hasFinal = chain.finals.some(id => schedule.includes(id));
+    const hasSemi = chain.semis.length === 0 || chain.semis.some(id => schedule.includes(id));
+    if (hasHeat && hasFinal && hasSemi) complete.add(game);
+  }
+  return complete;
+}
+
 function renderTimeline() {
   const container = document.getElementById('sched-timeline');
-  const sched = schedule.map(id => getEventById(id)).filter(Boolean).sort((a, b) => a.startTime - b.startTime);
+  const completeChains = getCompleteChainGames();
+  let sched = schedule.map(id => getEventById(id)).filter(Boolean);
+  if (hideDemos) sched = sched.filter(e => e.sessionType.toUpperCase() !== 'DEMO');
+  sched.sort((a, b) => a.startTime - b.startTime);
 
-  // Find which days have events
-  const days = [...new Set(sched.map(e => e.dayIndex))].sort();
-  if (days.length === 0) { container.innerHTML = ''; return; }
+  // Show all convention days (0-5)
+  const days = [0, 1, 2, 3, 4, 5];
 
-  // Time range: 9 AM to 1 AM next day = 9 to 25 (we'll use hour offsets)
   const startHour = 9;
   const endHour = 25; // 1 AM next day
   const totalSlots = (endHour - startHour) * 2; // 30-min slots
+  const slotHeight = 20;
+  const totalHeight = totalSlots * slotHeight;
 
-  const cols = days.length + 1; // +1 for time labels
-  let html = `<div class="timeline-wrap"><div class="timeline" style="grid-template-columns: 60px ${days.map(() => '1fr').join(' ')}; grid-template-rows: auto ${Array(totalSlots).fill('20px').join(' ')};">`;
+  // Helper: compute pixel positions for an event
+  function eventPos(e) {
+    let eStartHour = e.startTime.getHours() + e.startTime.getMinutes() / 60;
+    if (e.startTime.getDate() !== 20 + e.dayIndex && e.startTime.getHours() < startHour) {
+      eStartHour += 24;
+    }
+    let eEndHour = e.endTime.getHours() + e.endTime.getMinutes() / 60;
+    if (e.endTime.getDate() > e.startTime.getDate() || (e.endTime.getHours() < e.startTime.getHours() && e.duration > 0)) {
+      eEndHour += 24;
+    }
+    if (eEndHour < eStartHour) eEndHour += 24;
+    const top = (eStartHour - startHour) * 2 * slotHeight;
+    const height = (eEndHour - eStartHour) * 2 * slotHeight;
+    return { top, height, startH: eStartHour, endH: eEndHour };
+  }
+
+  // Assign sub-columns for overlapping events within each day
+  function layoutDay(dayEvents) {
+    const items = dayEvents.map(e => ({ e, ...eventPos(e) })).filter(it => it.height > 0 && it.top >= 0);
+    items.sort((a, b) => a.top - b.top || a.height - b.height);
+    // Greedy column assignment
+    const columns = []; // each column is an array of items
+    for (const item of items) {
+      let placed = false;
+      for (let c = 0; c < columns.length; c++) {
+        const last = columns[c][columns[c].length - 1];
+        if (item.top >= last.top + last.height) {
+          columns[c].push(item);
+          item.col = c;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        item.col = columns.length;
+        columns.push([item]);
+      }
+    }
+    const totalCols = columns.length || 1;
+    items.forEach(it => { it.totalCols = totalCols; });
+    return items;
+  }
+
+  // Build grid: time column + one column per day
+  let html = `<div class="timeline-wrap"><div class="timeline" style="grid-template-columns: 60px ${days.map(() => '1fr').join(' ')}; grid-template-rows: auto ${totalHeight}px;">`;
 
   // Header row
   html += `<div class="tl-header" style="grid-column:1">Time</div>`;
@@ -1230,7 +2016,8 @@ function renderTimeline() {
     html += `<div class="tl-header" style="grid-column:${ci + 2}">${DAY_NAMES[di]}</div>`;
   });
 
-  // Time labels
+  // Time labels column
+  html += `<div style="grid-column:1;grid-row:2;position:relative;">`;
   for (let s = 0; s < totalSlots; s++) {
     const hour = startHour + Math.floor(s / 2);
     const min = (s % 2) * 30;
@@ -1238,37 +2025,27 @@ function renderTimeline() {
       const displayHour = hour > 24 ? hour - 24 : hour;
       const ampm = displayHour >= 12 && displayHour < 24 ? 'PM' : 'AM';
       const h12 = displayHour % 12 || 12;
-      html += `<div class="tl-time" style="grid-row:${s + 2}">${h12} ${ampm}</div>`;
+      html += `<div class="tl-time" style="position:absolute;top:${s * slotHeight}px;right:0;height:${slotHeight * 2}px;">${h12} ${ampm}</div>`;
     }
   }
+  html += `</div>`;
 
-  // Place events
-  sched.forEach(e => {
-    const colIdx = days.indexOf(e.dayIndex);
-    if (colIdx < 0) return;
-    const col = colIdx + 2;
-
-    let eStartHour = e.startTime.getHours() + e.startTime.getMinutes() / 60;
-    // Handle midnight crossing: if the event is on a different calendar day than its dayIndex
-    if (e.startTime.getDate() !== 20 + e.dayIndex && e.startTime.getHours() < startHour) {
-      eStartHour += 24;
+  // Day columns with events
+  days.forEach((di, ci) => {
+    const dayEvents = sched.filter(e => e.dayIndex === di);
+    const items = layoutDay(dayEvents);
+    html += `<div class="tl-day-col" style="grid-column:${ci + 2};grid-row:2;">`;
+    for (const it of items) {
+      const cls = classifySessionType(it.e.sessionType);
+      const typeLabel = ` <span class="tl-type ${getSessionBadgeClass(it.e.sessionType)}">${esc(it.e.sessionType)}</span>`;
+      const leftPct = (it.col / it.totalCols * 100).toFixed(2);
+      const widthPct = (100 / it.totalCols).toFixed(2);
+      const isChain = completeChains.has(it.e.gameName);
+      const chainCls = isChain ? ' tl-chain' : '';
+      const gameTxt = isChain ? `<span class="tl-game">${esc(it.e.gameName)}</span>` : esc(it.e.gameName);
+      html += `<div class="tl-event tl-${cls}${chainCls}" style="top:${it.top}px;height:${it.height}px;left:${leftPct}%;width:${widthPct}%;" title="${esc(it.e.subject)}\n${formatTimeRange(it.e)}${isChain ? '\n✓ Complete tournament chain' : ''}">${gameTxt}${typeLabel}</div>`;
     }
-
-    let eEndHour = e.endTime.getHours() + e.endTime.getMinutes() / 60;
-    if (e.endTime.getDate() > e.startTime.getDate() || (e.endTime.getHours() < e.startTime.getHours() && e.duration > 0)) {
-      eEndHour += 24;
-    }
-    // If the end hour is small (like 0 or 1 AM) and start is in PM range
-    if (eEndHour < eStartHour) eEndHour += 24;
-
-    const rowStart = Math.round((eStartHour - startHour) * 2) + 2;
-    const rowEnd = Math.round((eEndHour - startHour) * 2) + 2;
-    if (rowStart < 2 || rowEnd <= rowStart) return;
-
-    const r = ratings[e.id] || 'interested';
-    const cls = classifySessionType(e.sessionType);
-    const typeLabel = cls === 'heat' || cls === 'semi' || cls === 'final' ? ` <span class="tl-type ${getSessionBadgeClass(e.sessionType)}">${esc(e.sessionType)}</span>` : '';
-    html += `<div class="tl-event tl-${r}" style="grid-column:${col};grid-row:${rowStart}/${rowEnd}" title="${esc(e.subject)}\n${formatTimeRange(e)}">${esc(e.gameName)}${typeLabel}</div>`;
+    html += `</div>`;
   });
 
   html += '</div></div>';
@@ -1277,7 +2054,10 @@ function renderTimeline() {
 
 function renderScheduleList() {
   const container = document.getElementById('sched-list');
-  const sched = schedule.map(id => getEventById(id)).filter(Boolean).sort((a, b) => a.startTime - b.startTime);
+  const completeChains = getCompleteChainGames();
+  let sched = schedule.map(id => getEventById(id)).filter(Boolean);
+  if (hideDemos) sched = sched.filter(e => e.sessionType.toUpperCase() !== 'DEMO');
+  sched.sort((a, b) => a.startTime - b.startTime);
   const byDay = {};
   sched.forEach(e => {
     if (!byDay[e.dayIndex]) byDay[e.dayIndex] = [];
@@ -1285,9 +2065,12 @@ function renderScheduleList() {
   });
 
   let html = '<div class="sched-list">';
-  for (const di of Object.keys(byDay).map(Number).sort()) {
+  for (let di = 0; di < 6; di++) {
     html += `<div class="sl-day">${DAY_LABELS[di]}</div>`;
-    const dayEvts = byDay[di];
+    const dayEvts = byDay[di] || [];
+    if (dayEvts.length === 0) {
+      html += `<div class="sl-item" style="color:var(--text-muted);font-style:italic;">No events scheduled</div>`;
+    }
     for (let i = 0; i < dayEvts.length; i++) {
       const e = dayEvts[i];
       if (i > 0) {
@@ -1296,9 +2079,11 @@ function renderScheduleList() {
           html += `<div class="sl-gap">Free: ${formatDuration(gap)}</div>`;
         }
       }
-      html += `<div class="sl-item">
+      const slCls = classifySessionType(e.sessionType);
+      const chainBadge = completeChains.has(e.gameName) ? '<span class="chain-badge">Full Chain</span>' : '';
+      html += `<div class="sl-item sl-${slCls}">
         <span class="sl-time">${formatTimeRange(e)}</span>
-        <span class="sl-name">${esc(e.gameName)}</span>
+        <span class="sl-name">${esc(e.gameName)}${chainBadge}</span>
         <span class="session-badge ${getSessionBadgeClass(e.sessionType)}" style="font-size:0.7rem">${esc(e.sessionType)}</span>
       </div>`;
     }
@@ -1308,6 +2093,14 @@ function renderScheduleList() {
 }
 
 // ===== VIEW SWITCHING =====
+function toggleHideDemos() {
+  hideDemos = !hideDemos;
+  const btn = document.getElementById('hide-demos-btn');
+  btn.textContent = hideDemos ? 'Show Demos' : 'Hide Demos';
+  if (hideDemos) { btn.classList.add('active'); } else { btn.classList.remove('active'); }
+  renderSchedulePanel();
+}
+
 function switchView(view, btn) {
   document.querySelectorAll('.sched-controls button[data-view]').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -1352,6 +2145,57 @@ function exportCSV() {
   showToast('CSV downloaded!');
 }
 
+function exportPDF() {
+  if (!schedule || schedule.length === 0) { showToast('No schedule to export'); return; }
+  // Ensure the list view is rendered before printing
+  renderScheduleList();
+  window.print();
+}
+
+function toggleAdvancedMode() {
+  const advanced = document.getElementById('advanced-mode').checked;
+  document.querySelectorAll('.advanced-filter').forEach(el => {
+    el.style.display = advanced ? '' : 'none';
+  });
+  if (!advanced) {
+    // Reset filters to defaults
+    document.getElementById('filter-game').value = '';
+    document.getElementById('filter-day').value = '';
+    document.getElementById('filter-type').value = 'final';
+    document.getElementById('filter-rating').value = '';
+    renderEventList();
+  }
+}
+
+function markAllUnratedIfItFits() {
+  let count = 0;
+  events.forEach(e => {
+    if (e.sessionType.toUpperCase() === 'DEMO') return;
+    if (!ratings[e.id]) {
+      ratings[e.id] = 'ifit';
+      count++;
+    }
+  });
+  if (count === 0) { showToast('No unrated events to mark'); return; }
+  saveRatings();
+  renderEventList();
+  showToast(`Marked ${count} events as "If It Fits"`);
+}
+
+function clearAllRatings() {
+  const count = Object.keys(ratings).length;
+  if (count === 0) { showToast('No ratings to clear'); return; }
+  if (!confirm(`Clear all ${count} ratings? This cannot be undone.`)) return;
+  ratings = {};
+  autoHeats = {};
+  autoSemis = {};
+  saveRatings();
+  saveAutoHeats();
+  saveAutoSemis();
+  renderEventList();
+  showToast(`Cleared ${count} ratings`);
+}
+
 // ===== TABS =====
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -1360,6 +2204,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.add('active');
     document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
     if (tab.dataset.tab === 'ratings') renderRatingsPanel();
+    if (tab.dataset.tab === 'conflicts') renderConflictsPanel();
     if (tab.dataset.tab === 'optimize') renderOptimizePanel();
     if (tab.dataset.tab === 'schedule') renderSchedulePanel();
   });
@@ -1373,15 +2218,33 @@ document.getElementById('filter-type').addEventListener('change', renderEventLis
 document.getElementById('filter-rating').addEventListener('change', renderEventList);
 
 // ===== INIT =====
+function showWelcome() {
+  try {
+    if (localStorage.getItem('rookscon2026_welcomed')) return;
+  } catch (e) {}
+  document.getElementById('welcome-modal').style.display = '';
+}
+
+function closeWelcome() {
+  document.getElementById('welcome-modal').style.display = 'none';
+  if (document.getElementById('dont-show-again').checked) {
+    try { localStorage.setItem('rookscon2026_welcomed', '1'); } catch (e) {}
+  }
+}
+
 function init() {
   events = parseCSV(CSV_RAW);
   chains = detectChains(events);
   loadRatings();
   loadAutoHeats();
+  loadAutoSemis();
   loadSchedule();
   populateFilters();
+  populateTimeSelects();
+  renderBlockedTimes();
   renderBulkBar();
   renderEventList();
+  showWelcome();
 }
 init();
 </script>
