@@ -274,7 +274,7 @@ header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
       <span class="progress" id="progress-text">0 / 239 rated</span>
       <button class="ifit-btn" onclick="markAllUnratedIfItFits()">Mark Rest "If It Fits"</button>
       <label class="advanced-toggle"><input type="checkbox" id="advanced-mode" onchange="toggleAdvancedMode()"> Advanced Mode</label>
-      <button class="clear-btn advanced-filter" style="display:none" onclick="clearAllRatings()">Clear All Ratings</button>
+      <button class="clear-btn" onclick="clearAllRatings()">Clear All Ratings</button>
     </div>
     <div class="bulk-bar" id="bulk-bar"></div>
     <div id="events-container"></div>
@@ -1663,6 +1663,8 @@ function runOptimize() {
     }
   }
 
+  const lockedIds = new Set(locked.map(e => e.id));
+
   // Candidates: interested (weight 10) and ifit (weight 3)
   let candidates = events.filter(e =>
     ratings[e.id] === 'interested' || ratings[e.id] === 'ifit'
@@ -1725,6 +1727,40 @@ function runOptimize() {
     } else {
       preSelected.push(bestPair.heat.id, bestPair.final.id);
     }
+  }
+
+  // Complete chains around locked (Must Attend) tournament events
+  for (const [game, chain] of Object.entries(chains)) {
+    const allIds = [...chain.heats, ...chain.semis, ...chain.finals];
+    const hasLockedEvent = allIds.some(id => lockedIds.has(id));
+    if (!hasLockedEvent) continue;
+    if (allIds.some(id => preSelected.includes(id))) continue;
+
+    const hasLockedHeat = chain.heats.some(id => lockedIds.has(id));
+    const hasLockedFinal = chain.finals.some(id => lockedIds.has(id));
+    const hasLockedSemi = chain.semis.some(id => lockedIds.has(id));
+
+    const allBlocked = [...locked, ...preSelected.map(id => getEventById(id)).filter(Boolean)];
+    const isViableForChain = e => e && !lockedIds.has(e.id) && !excludedDays.has(e.dayIndex)
+      && !isBlockedByTime(e) && !allBlocked.some(b => b.id !== e.id && eventsOverlap(e, b));
+
+    const toAdd = [];
+    if (!hasLockedHeat) {
+      const viableHeats = chain.heats.map(id => getEventById(id)).filter(isViableForChain);
+      if (viableHeats.length > 0) toAdd.push(viableHeats[0].id);
+    }
+    if (chain.semis.length > 0 && !hasLockedSemi) {
+      const viableSemis = chain.semis.map(id => getEventById(id))
+        .filter(e => isViableForChain(e) && !toAdd.some(tid => eventsOverlap(e, getEventById(tid))));
+      if (viableSemis.length > 0) toAdd.push(viableSemis[0].id);
+    }
+    if (!hasLockedFinal) {
+      const viableFinals = chain.finals.map(id => getEventById(id))
+        .filter(e => isViableForChain(e) && !toAdd.some(tid => eventsOverlap(e, getEventById(tid))));
+      if (viableFinals.length > 0) toAdd.push(viableFinals[0].id);
+    }
+
+    preSelected.push(...toAdd);
   }
 
   // Remove pre-selected events from candidates and filter overlaps
@@ -1825,23 +1861,26 @@ function runOptimize() {
 
   // Step 1: Trim to at most 1 of each stage per game
   for (const [game, chain] of Object.entries(chains)) {
-    // Keep only earliest scheduled heat
+    // Keep only 1 scheduled heat (prefer locked, then earliest)
     const schedHeats = chain.heats.filter(id => schedule.includes(id));
     if (schedHeats.length > 1) {
-      const sorted = schedHeats.map(id => getEventById(id)).sort((a, b) => a.startTime - b.startTime);
-      sorted.slice(1).forEach(e => { schedule = schedule.filter(sid => sid !== e.id); });
+      const sorted = schedHeats.map(id => getEventById(id))
+        .sort((a, b) => (lockedIds.has(b.id) ? 1 : 0) - (lockedIds.has(a.id) ? 1 : 0) || a.startTime - b.startTime);
+      sorted.slice(1).forEach(e => { if (!lockedIds.has(e.id)) schedule = schedule.filter(sid => sid !== e.id); });
     }
-    // Keep only earliest scheduled semi
+    // Keep only 1 scheduled semi (prefer locked, then earliest)
     const schedSemis = chain.semis.filter(id => schedule.includes(id));
     if (schedSemis.length > 1) {
-      const sorted = schedSemis.map(id => getEventById(id)).sort((a, b) => a.startTime - b.startTime);
-      sorted.slice(1).forEach(e => { schedule = schedule.filter(sid => sid !== e.id); });
+      const sorted = schedSemis.map(id => getEventById(id))
+        .sort((a, b) => (lockedIds.has(b.id) ? 1 : 0) - (lockedIds.has(a.id) ? 1 : 0) || a.startTime - b.startTime);
+      sorted.slice(1).forEach(e => { if (!lockedIds.has(e.id)) schedule = schedule.filter(sid => sid !== e.id); });
     }
-    // Keep only earliest scheduled final
+    // Keep only 1 scheduled final (prefer locked, then earliest)
     const schedFinals = chain.finals.filter(id => schedule.includes(id));
     if (schedFinals.length > 1) {
-      const sorted = schedFinals.map(id => getEventById(id)).sort((a, b) => a.startTime - b.startTime);
-      sorted.slice(1).forEach(e => { schedule = schedule.filter(sid => sid !== e.id); });
+      const sorted = schedFinals.map(id => getEventById(id))
+        .sort((a, b) => (lockedIds.has(b.id) ? 1 : 0) - (lockedIds.has(a.id) ? 1 : 0) || a.startTime - b.startTime);
+      sorted.slice(1).forEach(e => { if (!lockedIds.has(e.id)) schedule = schedule.filter(sid => sid !== e.id); });
     }
 
     // Step 2a: If a final (or semi) is scheduled but no heat, try to add a non-conflicting one
@@ -1902,7 +1941,7 @@ function runOptimize() {
     }
   }
 
-  // Step 3: Enforce chain dependencies iteratively
+  // Step 3: Enforce chain dependencies iteratively (never remove Must Attend events)
   let changed = true;
   while (changed) {
     changed = false;
@@ -1911,25 +1950,25 @@ function runOptimize() {
       const hasSemi = chain.semis.some(id => schedule.includes(id));
       const hasFinal = chain.finals.some(id => schedule.includes(id));
 
-      // No heat → remove everything
+      // No heat → remove non-locked semis/finals
       if (!hasHeat && (hasSemi || hasFinal)) {
-        [...chain.semis, ...chain.finals].filter(id => schedule.includes(id)).forEach(id => {
+        [...chain.semis, ...chain.finals].filter(id => schedule.includes(id) && !lockedIds.has(id)).forEach(id => {
           schedule = schedule.filter(sid => sid !== id);
           removed.push(`${game} (no heat)`);
           changed = true;
         });
       }
-      // No final → remove heats and semis
+      // No final → remove non-locked heats and semis
       if (!hasFinal && (hasHeat || hasSemi)) {
-        [...chain.heats, ...chain.semis].filter(id => schedule.includes(id)).forEach(id => {
+        [...chain.heats, ...chain.semis].filter(id => schedule.includes(id) && !lockedIds.has(id)).forEach(id => {
           schedule = schedule.filter(sid => sid !== id);
           removed.push(`${game} (no final)`);
           changed = true;
         });
       }
-      // Game has separate semis: no semi → remove final (which cascades)
+      // Game has separate semis: no semi → remove non-locked final (which cascades)
       if (chain.semis.length > 0 && !hasSemi && hasFinal) {
-        chain.finals.filter(id => schedule.includes(id)).forEach(id => {
+        chain.finals.filter(id => schedule.includes(id) && !lockedIds.has(id)).forEach(id => {
           schedule = schedule.filter(sid => sid !== id);
           removed.push(`${game} (no semi)`);
           changed = true;
